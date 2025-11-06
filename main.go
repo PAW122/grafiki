@@ -815,6 +815,50 @@ const pageTemplate = `<!DOCTYPE html>
       max-height: 95vh;
       border-radius: 20px;
       box-shadow: 0 20px 45px rgba(15, 23, 42, 0.55);
+      transition: transform 0.2s ease;
+      transform-origin: center;
+    }
+    .fullscreen-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      width: min(900px, 95vw);
+    }
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: min(420px, 90vw);
+      padding: 0.65rem 1rem;
+      border-radius: 999px;
+      background: rgba(12, 18, 31, 0.75);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+      color: #e2e8f0;
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1105;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .zoom-controls label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #cbd5f5;
+      white-space: nowrap;
+    }
+    .zoom-controls input[type="range"] {
+      flex: 1;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .zoom-value {
+      font-variant-numeric: tabular-nums;
+      min-width: 3ch;
+      text-align: right;
     }
     .modal-backdrop {
       position: fixed;
@@ -939,6 +983,15 @@ const pageTemplate = `<!DOCTYPE html>
         left: 1rem;
         right: 1rem;
       }
+      .zoom-controls {
+        flex-direction: column;
+        align-items: stretch;
+        border-radius: 16px;
+        gap: 0.5rem;
+        width: calc(100% - 2rem);
+        bottom: 1rem;
+        padding: 0.75rem 1rem;
+      }
     }
   </style>
 </head>
@@ -978,7 +1031,14 @@ const pageTemplate = `<!DOCTYPE html>
   </main>
 
   <div class="fullscreen-backdrop" id="backdrop" role="dialog" aria-modal="true">
-    <img id="fullImage" alt="">
+    <div class="fullscreen-content">
+      <img id="fullImage" alt="">
+      <div class="zoom-controls" id="zoomControls" hidden>
+        <label for="zoomSlider">Powiekszenie</label>
+        <input type="range" id="zoomSlider" min="100" max="250" step="10" value="100">
+        <span class="zoom-value" id="zoomValue">100%</span>
+      </div>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="loginModal">
@@ -1012,6 +1072,9 @@ const pageTemplate = `<!DOCTYPE html>
     const uploadForm = document.getElementById('uploadForm');
     const quickUploadInput = document.getElementById('quickUploadInput');
     const messageEl = document.getElementById('statusMessage');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomControls = document.getElementById('zoomControls');
+    const zoomValue = document.getElementById('zoomValue');
     let hideToast;
 
     function showMessage(text, type = 'info') {
@@ -1025,14 +1088,38 @@ const pageTemplate = `<!DOCTYPE html>
       }, 4000);
     }
 
+    function setZoom(value) {
+      if (!fullImage) return;
+      const scale = value / 100;
+      fullImage.style.transform = 'scale(' + scale + ')';
+      if (zoomValue) {
+        zoomValue.textContent = value + '%';
+      }
+    }
+
+    function resetZoom() {
+      if (zoomSlider) {
+        zoomSlider.value = '100';
+      }
+      setZoom(100);
+    }
+
     function openFullscreen(src, alt) {
       fullImage.src = src;
       fullImage.alt = alt;
+      resetZoom();
+      if (zoomControls) {
+        zoomControls.hidden = false;
+      }
       backdrop.classList.add('active');
     }
 
     function closeFullscreen() {
       backdrop.classList.remove('active');
+      if (zoomControls) {
+        zoomControls.hidden = true;
+      }
+      resetZoom();
       fullImage.src = '';
       fullImage.alt = '';
     }
@@ -1165,6 +1252,21 @@ const pageTemplate = `<!DOCTYPE html>
         } finally {
           quickUploadInput.value = '';
         }
+      });
+    }
+
+    if (zoomSlider) {
+      zoomSlider.addEventListener('input', () => {
+        const value = Number(zoomSlider.value) || 100;
+        setZoom(value);
+      });
+    }
+
+    if (zoomControls) {
+      ['click', 'mousedown', 'pointerdown', 'touchstart'].forEach(type => {
+        zoomControls.addEventListener(type, event => {
+          event.stopPropagation();
+        });
       });
     }
 
