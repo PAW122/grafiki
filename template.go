@@ -321,30 +321,52 @@ const pageTemplate = `<!DOCTYPE html>
       display: flex;
     }
     .fullscreen-content {
-      max-width: min(90vw, 1100px);
-      max-height: 90vh;
+      width: min(90vw, 1100px);
+      min-width: min(80vw, 1100px);
+      height: min(90vh, 900px);
+      min-height: min(80vh, 900px);
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.85);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
     }
     .fullscreen-content img {
       max-width: 100%;
-      max-height: 80vh;
+      max-height: calc(100% - 2.5rem);
       object-fit: contain;
       border-radius: 18px;
       box-shadow: 0 25px 70px rgba(0, 0, 0, 0.65);
-      transition: transform 0.2s ease;
+      transition: transform 0.15s ease;
+      cursor: grab;
+      touch-action: none;
+      will-change: transform;
+    }
+    .fullscreen-content img.dragging {
+      cursor: grabbing;
     }
     .zoom-controls {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1101;
+      min-width: min(420px, 90vw);
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.85);
       border-radius: 999px;
-      padding: 0.35rem 1rem;
+      padding: 0.5rem 1.25rem;
       color: #fff;
       font-size: 0.9rem;
-      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(12px);
     }
     .zoom-controls input[type="range"] {
       flex: 1;
@@ -723,6 +745,18 @@ const pageTemplate = `<!DOCTYPE html>
     const downloadQrButton = document.getElementById('downloadQrButton');
     let hideToast;
 
+    const zoomState = {
+      value: 100,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      panFrame: null
+    };
+
     function showMessage(text, type = 'info') {
       if (!messageEl) return;
       messageEl.textContent = text;
@@ -742,27 +776,108 @@ const pageTemplate = `<!DOCTYPE html>
       modal?.classList.remove('active');
     }
 
-    function setZoom(value) {
+    function applyImageTransform(immediate = false) {
       if (!fullImage) return;
-      const scale = value / 100;
-      fullImage.style.transform = 'scale(' + scale + ')';
+      const apply = () => {
+        fullImage.style.transform = 'translate3d(' + zoomState.panX + 'px, ' + zoomState.panY + 'px, 0) scale(' + zoomState.scale + ')';
+      };
+      if (immediate) {
+        if (zoomState.panFrame) {
+          cancelAnimationFrame(zoomState.panFrame);
+          zoomState.panFrame = null;
+        }
+        apply();
+        return;
+      }
+      if (zoomState.panFrame) {
+        cancelAnimationFrame(zoomState.panFrame);
+      }
+      zoomState.panFrame = requestAnimationFrame(() => {
+        zoomState.panFrame = null;
+        apply();
+      });
+    }
+
+    function setZoom(value) {
+      const numeric = Number(value);
+      const clamped = Math.min(250, Math.max(100, Number.isFinite(numeric) ? numeric : 100));
+      zoomState.value = clamped;
+      zoomState.scale = clamped / 100;
+      applyImageTransform(true);
+      if (zoomSlider && zoomSlider.value !== String(clamped)) {
+        zoomSlider.value = String(clamped);
+      }
       if (zoomValue) {
-        zoomValue.textContent = value + '%';
+        zoomValue.textContent = clamped + '%';
       }
     }
 
-    function resetZoom() {
-      if (zoomSlider) {
+    function resetView() {
+      const activePointer = zoomState.pointerId;
+      zoomState.pointerId = null;
+      zoomState.dragging = false;
+      zoomState.panX = 0;
+      zoomState.panY = 0;
+      if (fullImage) {
+        fullImage.classList.remove('dragging');
+        fullImage.style.transition = '';
+        if (typeof fullImage.releasePointerCapture === 'function' && activePointer !== null) {
+          try {
+            fullImage.releasePointerCapture(activePointer);
+          } catch (_) {}
+        }
+      }
+      if (zoomSlider && zoomSlider.value !== '100') {
         zoomSlider.value = '100';
       }
       setZoom(100);
+    }
+
+    function startPan(event) {
+      if (!fullImage) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      zoomState.dragging = true;
+      zoomState.pointerId = event.pointerId;
+      zoomState.lastX = event.clientX;
+      zoomState.lastY = event.clientY;
+      fullImage.setPointerCapture?.(event.pointerId);
+      fullImage.style.transition = 'none';
+      fullImage.classList.add('dragging');
+    }
+
+    function movePan(event) {
+      if (!zoomState.dragging || event.pointerId !== zoomState.pointerId) {
+        return;
+      }
+      event.preventDefault();
+      zoomState.panX += event.clientX - zoomState.lastX;
+      zoomState.panY += event.clientY - zoomState.lastY;
+      zoomState.lastX = event.clientX;
+      zoomState.lastY = event.clientY;
+      applyImageTransform();
+    }
+
+    function endPan(event) {
+      if (!zoomState.dragging || event.pointerId !== zoomState.pointerId) {
+        return;
+      }
+      zoomState.dragging = false;
+      zoomState.pointerId = null;
+      fullImage?.classList.remove('dragging');
+      if (fullImage) {
+        fullImage.style.transition = '';
+      }
+      fullImage?.releasePointerCapture?.(event.pointerId);
     }
 
     function openFullscreen(src, alt) {
       if (!backdrop || !fullImage) return;
       fullImage.src = src;
       fullImage.alt = alt;
-      resetZoom();
+      resetView();
       if (zoomControls) {
         zoomControls.hidden = false;
       }
@@ -774,7 +889,7 @@ const pageTemplate = `<!DOCTYPE html>
       if (zoomControls) {
         zoomControls.hidden = true;
       }
-      resetZoom();
+      resetView();
       if (fullImage) {
         fullImage.src = '';
         fullImage.alt = '';
@@ -793,7 +908,19 @@ const pageTemplate = `<!DOCTYPE html>
       });
     });
 
-    backdrop?.addEventListener('click', closeFullscreen);
+    if (fullImage) {
+      fullImage.addEventListener('pointerdown', startPan);
+      fullImage.addEventListener('pointermove', movePan);
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => {
+        fullImage.addEventListener(type, endPan);
+      });
+    }
+
+    backdrop?.addEventListener('click', event => {
+      if (event.target === backdrop) {
+        closeFullscreen();
+      }
+    });
 
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {

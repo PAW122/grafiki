@@ -35,14 +35,31 @@ type server struct {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	pathSlug := strings.Trim(r.URL.Path, "/")
+	var rawSlug string
+	if pathSlug != "" {
+		if strings.Contains(pathSlug, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		rawSlug = pathSlug
+	} else {
+		rawSlug = strings.TrimSpace(r.URL.Query().Get("folder"))
+	}
+
+	var folderSlug string
+	if rawSlug != "" {
+		folderSlug = sanitizeFilename(rawSlug)
+		if folderSlug == "" {
+			http.NotFound(w, r)
+			return
+		}
 	}
 
 	if s.logger != nil {
@@ -67,8 +84,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var activeFolder *folderView
 	var images []imageInfo
 
-	if slug := strings.TrimSpace(r.URL.Query().Get("folder")); slug != "" {
-		rec, err := s.getFolderBySlug(slug)
+	if folderSlug != "" {
+		rec, err := s.getFolderBySlug(folderSlug)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.NotFound(w, r)
