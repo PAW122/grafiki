@@ -1,0 +1,30 @@
+tworzenie folderów
+drag and drop do folderu
+
+opcją włączenia udostępniania public linku do folderu
+i kod qr
+
+opcja ustawienia folder publiczny
+
+----
+
+opcja przeówania grafiki na left-click
+
+
+
+chciałbym na stronie zaimplementować system folderów.
+kiedy użytkownik się zaloguje może stworzyć folder z dowolną nazwą i widzi go w UI, może do niego wejść jak był normalnie w eksploratorze windowsa
++może otworzyć ustawienia folderu
+w tych ustawieniach ma mieć opcje:
+a) public - folder jest publiczny i można wyświetlić go i jego grafiki każdemu nawet nie zalogowanemu userowi
+b) shared - folder jest dostępny tylko z randomowo wygenerowanego linku
+    > licz ilość wejść na ten link
+    > oprócz linku dodaj opcję pobrania obrazka z kodem qr
+c) private - tylko zalogowany user może wejść w folder i wyświetlić jego pliki
+
+do przechowywania ustawień i innych danych uszyj sqlite
+
+-------------------------------
+opcja przesuwania grafik.
+kiedy user otworzy grafikę to może "złapać" ją lewym przyciskiem myszy i przesuwać jakby był na canvasie,
+kliknięcie poza grafika zamyka jej powiększenie
