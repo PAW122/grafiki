@@ -386,17 +386,65 @@ const pageTemplate = `<!DOCTYPE html>
     }
     .modal {
       background: #fff;
-      border-radius: 20px;
-      padding: 1.5rem 1.75rem;
-      width: min(420px, 90vw);
+      border-radius: 24px;
+      padding: 1.75rem 2rem;
+      width: min(460px, 92vw);
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+      gap: 1.1rem;
+      box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+    }
+    .modal.modal-large {
+      width: min(640px, 94vw);
+      padding: 2rem 2.35rem;
+      gap: 1.35rem;
     }
     .modal h2 {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1.35rem;
+      color: #0f172a;
+    }
+    .modal-subtitle {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #475569;
+    }
+    .modal-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .section-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .visibility-options {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 0.35rem;
+    }
+    .radio-option {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      border-radius: 14px;
+      align-items: flex-start;
+      background: rgba(248, 250, 252, 0.75);
+    }
+    .radio-option input {
+      margin-top: 0.2rem;
+    }
+    .radio-description {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      font-size: 0.88rem;
+      color: #475569;
+    }
+    .radio-description strong {
+      font-size: 0.95rem;
       color: #0f172a;
     }
     .modal label {
@@ -660,7 +708,7 @@ const pageTemplate = `<!DOCTYPE html>
       <h2>Nowy folder</h2>
       <label>
         Nazwa folderu
-        <input type="text" name="name" placeholder="np. Klienci Q4" required>
+        <input type="text" name="name" placeholder="np. Zajecia-1" required>
       </label>
       <div class="modal-actions">
         <button class="primary" type="submit">Utworz</button>
@@ -670,26 +718,49 @@ const pageTemplate = `<!DOCTYPE html>
   </div>
 
   <div class="modal-backdrop" id="folderSettingsModal">
-    <form class="modal" id="folderSettingsForm">
-      <h2>Ustawienia folderu</h2>
-      <label>
-        <strong>Widocznosc</strong>
-        <div>
-          <label><input type="radio" name="visibility" value="public"> Publiczny - widoczny dla kazdego</label>
-          <label><input type="radio" name="visibility" value="shared"> Udostepniony - tylko przez link</label>
-          <label><input type="radio" name="visibility" value="private"> Prywatny - wymagane logowanie</label>
+    <form class="modal modal-large" id="folderSettingsForm">
+      <div class="modal-section">
+        <h2>Ustawienia folderu</h2>
+        <p class="modal-subtitle">Dostosuj widocznosc oraz linki udostepnione dla tego katalogu.</p>
+      </div>
+      <div class="modal-section">
+        <span class="section-label">Widocznosc</span>
+        <div class="visibility-options">
+          <label class="radio-option">
+            <input type="radio" name="visibility" value="public">
+            <span class="radio-description">
+              <strong>Publiczny</strong>
+              <span>Widoczny dla wszystkich odwiedzajacych strone.</span>
+            </span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="visibility" value="shared">
+            <span class="radio-description">
+              <strong>Udostepniony link</strong>
+              <span>Dostep tylko przez tajny link, idealne do wspoldzielenia.</span>
+            </span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="visibility" value="private">
+            <span class="radio-description">
+              <strong>Prywatny</strong>
+              <span>Widoczny tylko po zalogowaniu jako administrator.</span>
+            </span>
+          </label>
         </div>
-      </label>
-      <div class="share-details" id="shareDetails" hidden>
-        <strong>Udostepniony link</strong>
-        <div class="share-link-row">
-          <code id="shareLinkValue"></code>
-          <button type="button" class="ghost" id="copyShareLink">Kopiuj</button>
-        </div>
-        <div class="share-link-row">
-          <span>Wejscia: <strong id="shareViewsValue">0</strong></span>
-          <button type="button" class="ghost" id="regenerateLinkButton">Nowy link</button>
-          <button type="button" class="ghost" id="downloadQrButton">Pobierz QR</button>
+      </div>
+      <div class="modal-section">
+        <div class="share-details" id="shareDetails" hidden>
+          <strong>Udostepniony link</strong>
+          <div class="share-link-row">
+            <code id="shareLinkValue"></code>
+            <button type="button" class="ghost" id="copyShareLink">Kopiuj</button>
+          </div>
+          <div class="share-link-row">
+            <span>Wejscia: <strong id="shareViewsValue">0</strong></span>
+            <button type="button" class="ghost" id="regenerateLinkButton">Nowy link</button>
+            <button type="button" class="ghost" id="downloadQrButton">Pobierz QR</button>
+          </div>
         </div>
       </div>
       <div class="modal-actions">
