@@ -1,9 +1,13 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 )
 
 type imageInfo struct {
@@ -12,9 +16,13 @@ type imageInfo struct {
 }
 
 type pageData struct {
-	Dir      string
-	Images   []imageInfo
-	LoggedIn bool
+	Images                []imageInfo
+	LoggedIn              bool
+	Folders               []folderView
+	ActiveFolder          *folderView
+	SharedMode            bool
+	AllowFolderManagement bool
+	BaseURL               string
 }
 
 type server struct {
@@ -23,6 +31,7 @@ type server struct {
 	tmpl     *template.Template
 	sessions *sessionStore
 	logger   *requestLogger
+	db       *sql.DB
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -40,20 +49,87 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.logger.Log(r, "wyswietl")
 	}
 
-	images, err := listImages(s.dir)
+	loggedIn := s.sessions.authenticated(r)
+	baseURL := requestBaseURL(r)
+
+	folders, err := s.listFolders(loggedIn)
 	if err != nil {
-		log.Printf("listImages: %v", err)
-		http.Error(w, "failed to load images", http.StatusInternalServerError)
+		log.Printf("list folders: %v", err)
+		http.Error(w, "failed to load folders", http.StatusInternalServerError)
 		return
 	}
 
+	var folderViews []folderView
+	for _, f := range folders {
+		folderViews = append(folderViews, f.toView(baseURL))
+	}
+
+	var activeFolder *folderView
+	var images []imageInfo
+
+	if slug := strings.TrimSpace(r.URL.Query().Get("folder")); slug != "" {
+		rec, err := s.getFolderBySlug(slug)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+			log.Printf("get folder: %v", err)
+			http.Error(w, "folder unavailable", http.StatusInternalServerError)
+			return
+		}
+		if !s.canAccessFolder(rec, loggedIn) {
+			http.NotFound(w, r)
+			return
+		}
+
+		view := rec.toView(baseURL)
+		activeFolder = &view
+
+		images, err = s.imagesForFolder(rec)
+		if err != nil {
+			log.Printf("listImages: %v", err)
+			http.Error(w, "failed to load images", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	data := pageData{
-		Dir:      s.dir,
-		Images:   images,
-		LoggedIn: s.sessions.authenticated(r),
+		Images:                images,
+		LoggedIn:              loggedIn,
+		Folders:               folderViews,
+		ActiveFolder:          activeFolder,
+		BaseURL:               baseURL,
+		AllowFolderManagement: loggedIn,
 	}
 
 	if err := s.tmpl.Execute(w, data); err != nil {
 		log.Printf("template execute: %v", err)
 	}
+}
+
+func (s *server) canAccessFolder(rec *folderRecord, loggedIn bool) bool {
+	switch rec.Visibility {
+	case visibilityPublic:
+		return true
+	case visibilityShared:
+		return loggedIn
+	case visibilityPrivate:
+		return loggedIn
+	default:
+		return false
+	}
+}
+
+func (s *server) imagesForFolder(rec *folderRecord) ([]imageInfo, error) {
+	dir := s.dir
+	urlPrefix := "/images/"
+	if rec != nil && rec.Path != "" {
+		dir = filepath.Join(s.dir, rec.Path)
+		urlPrefix = "/images/" + folderURLPrefix(rec.Path) + "/"
+	}
+	if err := ensureDir(dir); err != nil {
+		return nil, err
+	}
+	return listImages(dir, urlPrefix)
 }

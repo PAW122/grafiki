@@ -11,6 +11,9 @@ const pageTemplate = `<!DOCTYPE html>
       color-scheme: light dark;
       font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     }
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       background: #f3f4f8;
@@ -18,76 +21,190 @@ const pageTemplate = `<!DOCTYPE html>
     }
     .topbar {
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
       align-items: center;
-      padding: 1rem 2rem;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.25rem clamp(1rem, 4vw, 3rem);
       background: linear-gradient(135deg, #3a7bd5, #00d2ff);
       color: #fff;
-      box-shadow: 0 8px 24px rgba(58, 123, 213, 0.35);
+      box-shadow: 0 12px 30px rgba(58, 123, 213, 0.35);
     }
     .brand {
-      font-weight: 600;
-      font-size: 1.25rem;
+      font-weight: 700;
+      font-size: 1.4rem;
       letter-spacing: 0.04em;
     }
     .top-actions {
       display: flex;
       gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
     }
     .btn {
       border: none;
       border-radius: 999px;
-      padding: 0.55rem 1.25rem;
+      padding: 0.6rem 1.4rem;
       font-size: 0.95rem;
       font-weight: 500;
       cursor: pointer;
       transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
+    .btn:disabled,
+    .btn[aria-disabled="true"] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .btn-primary {
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.18);
       color: #fff;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
     }
     .btn-secondary {
-      background: rgba(15, 23, 42, 0.12);
+      background: rgba(15, 23, 42, 0.18);
       color: #fff;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
     }
-    .btn:hover {
+    .btn:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
     }
     .hidden-input {
       display: none;
     }
     .page {
       padding: 2rem clamp(1rem, 4vw, 3rem);
-      max-width: 1200px;
-      margin: 0 auto;
+      max-width: 1280px;
+      margin: 0 auto 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
-    .info-panel {
-      background: #ffffff;
-      border-radius: 18px;
+    .section-card {
+      background: #fff;
+      border-radius: 20px;
       padding: 1.5rem;
-      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
-      margin-bottom: 1.5rem;
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.09);
     }
-    .info-panel p {
-      margin: 0 0 0.4rem;
-      color: #52606d;
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .section-header p {
+      margin: 0.25rem 0 0;
+      color: #64748b;
+      font-size: 0.93rem;
+    }
+    .folders-panel {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .folders-grid {
+      margin-top: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .folder-card {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 1rem;
+      background: #f8fafc;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      transition: border 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+    .folder-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(37, 99, 235, 0.4);
+    }
+    .folder-card.active {
+      border-color: #2563eb;
+      background: #e0ebff;
+    }
+    .folder-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #111827;
+    }
+    .folder-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #475569;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.15rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .badge.public {
+      background: rgba(34, 197, 94, 0.15);
+      color: #15803d;
+    }
+    .badge.shared {
+      background: rgba(249, 115, 22, 0.15);
+      color: #c2410c;
+    }
+    .badge.private {
+      background: rgba(59, 130, 246, 0.15);
+      color: #1d4ed8;
+    }
+    .workspace {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .workspace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .workspace-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    .workspace-subtitle {
+      margin: 0.35rem 0 0;
+      color: #64748b;
       font-size: 0.95rem;
     }
-    .info-panel code {
-      background: rgba(82, 96, 109, 0.08);
-      padding: 0.25rem 0.45rem;
-      border-radius: 6px;
-      font-family: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
-      font-size: 0.85rem;
+    .workspace-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-panel {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 14px;
+      background: rgba(14, 165, 233, 0.1);
+      color: #0369a1;
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      font-size: 0.92rem;
     }
     .upload-panel {
-      display: grid;
-      gap: 1rem;
       margin-top: 1.25rem;
+      padding: 1rem;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.2);
     }
     .upload-panel form {
       display: flex;
@@ -98,28 +215,28 @@ const pageTemplate = `<!DOCTYPE html>
     .upload-panel input[type="file"],
     .upload-panel input[type="text"] {
       flex: 1 1 240px;
-      max-width: 320px;
-      padding: 0.65rem 0.8rem;
+      min-width: 200px;
+      padding: 0.65rem 0.85rem;
       border-radius: 10px;
-      border: 1px solid rgba(82, 96, 109, 0.2);
+      border: 1px solid rgba(148, 163, 184, 0.5);
       font-size: 0.95rem;
     }
     .upload-panel .submit-btn {
-      flex: 0 0 auto;
+      border: none;
+      border-radius: 10px;
       background: #2563eb;
       color: #fff;
-      padding: 0.65rem 1.4rem;
-      border-radius: 999px;
-      border: none;
+      padding: 0.65rem 1.5rem;
+      font-weight: 600;
       cursor: pointer;
-      font-weight: 500;
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      transition: box-shadow 0.18s ease, transform 0.18s ease;
     }
     .upload-panel .submit-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
     }
     .gallery {
+      margin-top: 1.5rem;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 1.25rem;
@@ -127,7 +244,7 @@ const pageTemplate = `<!DOCTYPE html>
     .tile {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
     .thumb {
       position: relative;
@@ -136,11 +253,11 @@ const pageTemplate = `<!DOCTYPE html>
       overflow: hidden;
       cursor: zoom-in;
       padding: 0;
-      background: #131722;
+      background: #0f172a;
       box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
       min-height: 200px;
       display: block;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .thumb:hover {
       transform: translateY(-4px);
@@ -151,7 +268,6 @@ const pageTemplate = `<!DOCTYPE html>
       height: 100%;
       object-fit: cover;
       display: block;
-      transition: transform 0.25s ease;
     }
     .tile-meta {
       display: flex;
@@ -169,10 +285,10 @@ const pageTemplate = `<!DOCTYPE html>
     .delete-btn {
       border: none;
       border-radius: 8px;
-      padding: 0.4rem 0.75rem;
-      background: rgba(239, 68, 68, 0.16);
-      color: #dc2626;
-      font-weight: 500;
+      padding: 0.35rem 0.8rem;
+      background: rgba(239, 68, 68, 0.18);
+      color: #b91c1c;
+      font-weight: 600;
       cursor: pointer;
       transition: background 0.18s ease, transform 0.18s ease;
     }
@@ -180,11 +296,16 @@ const pageTemplate = `<!DOCTYPE html>
       background: rgba(239, 68, 68, 0.28);
       transform: translateY(-2px);
     }
-    .empty {
+    .empty,
+    .empty-state {
       text-align: center;
+      color: #64748b;
+      padding: 2.5rem 1rem;
+      font-size: 1rem;
+    }
+    .empty-state.large {
       font-size: 1.1rem;
-      color: #52606d;
-      padding: 3rem 0;
+      padding: 3rem 1rem;
     }
     .fullscreen-backdrop {
       position: fixed;
@@ -199,109 +320,80 @@ const pageTemplate = `<!DOCTYPE html>
     .fullscreen-backdrop.active {
       display: flex;
     }
-    .fullscreen-backdrop img {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 20px;
-      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.55);
-      transition: transform 0.2s ease;
-      transform-origin: center;
-    }
     .fullscreen-content {
+      max-width: min(90vw, 1100px);
+      max-height: 90vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      width: min(900px, 95vw);
+      gap: 1rem;
+    }
+    .fullscreen-content img {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 18px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.65);
+      transition: transform 0.2s ease;
     }
     .zoom-controls {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      width: min(420px, 90vw);
-      padding: 0.65rem 1rem;
+      background: rgba(255, 255, 255, 0.08);
       border-radius: 999px;
-      background: rgba(12, 18, 31, 0.75);
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
-      color: #e2e8f0;
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1105;
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-    }
-    .zoom-controls label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #cbd5f5;
-      white-space: nowrap;
+      padding: 0.35rem 1rem;
+      color: #fff;
+      font-size: 0.9rem;
+      backdrop-filter: blur(8px);
     }
     .zoom-controls input[type="range"] {
       flex: 1;
-      accent-color: #38bdf8;
-      cursor: pointer;
-    }
-    .zoom-value {
-      font-variant-numeric: tabular-nums;
-      min-width: 3ch;
-      text-align: right;
     }
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.5);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 1100;
-      padding: 1.5rem;
+      z-index: 1001;
+      padding: 1rem;
     }
     .modal-backdrop.active {
       display: flex;
     }
     .modal {
-      background: #ffffff;
+      background: #fff;
       border-radius: 20px;
-      padding: 2rem;
-      width: min(360px, 90vw);
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
-      display: grid;
+      padding: 1.5rem 1.75rem;
+      width: min(420px, 90vw);
+      display: flex;
+      flex-direction: column;
       gap: 1rem;
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
     }
     .modal h2 {
       margin: 0;
       font-size: 1.25rem;
-      color: #111827;
-      text-align: center;
+      color: #0f172a;
     }
     .modal label {
-      display: grid;
-      gap: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
       font-size: 0.9rem;
-      color: #364152;
+      color: #475569;
     }
-    .modal input {
-      padding: 0.65rem 0.8rem;
-      border-radius: 10px;
-      border: 1px solid rgba(82, 96, 109, 0.2);
+    .modal input,
+    .modal textarea {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 0.6rem 0.8rem;
       font-size: 0.95rem;
-      background: #f8fafc;
-      color: #111827;
-      transition: border 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-    }
-    .modal input:focus {
-      outline: none;
-      border-color: rgba(37, 99, 235, 0.6);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-      background: #ffffff;
     }
     .modal-actions {
       display: flex;
       gap: 0.75rem;
-      justify-content: center;
     }
     .modal .primary {
       flex: 1;
@@ -314,25 +406,43 @@ const pageTemplate = `<!DOCTYPE html>
       cursor: pointer;
       transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
-    .modal .primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.35);
-    }
     .modal .ghost {
       flex: 1;
-      background: #f8fafc;
-      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.7);
       border-radius: 12px;
       padding: 0.65rem;
       font-weight: 500;
       cursor: pointer;
-      color: #364152;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      color: #475569;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
-    .modal .ghost:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
-      background: #eef2f8;
+    .share-details {
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      border-radius: 12px;
+      padding: 0.75rem;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .share-details strong {
+      font-size: 0.9rem;
+      color: #0f172a;
+    }
+    .share-link-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .share-link-row code {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.08);
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .toast {
       position: fixed;
@@ -344,7 +454,7 @@ const pageTemplate = `<!DOCTYPE html>
       border-radius: 12px;
       box-shadow: 0 15px 40px rgba(17, 24, 39, 0.35);
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(15px);
       pointer-events: none;
       transition: opacity 0.2s ease, transform 0.2s ease;
       z-index: 1200;
@@ -359,38 +469,34 @@ const pageTemplate = `<!DOCTYPE html>
       box-shadow: 0 15px 40px rgba(220, 38, 38, 0.35);
     }
     @media (max-width: 720px) {
+      .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
       .topbar {
         flex-direction: column;
-        gap: 1rem;
-        text-align: center;
+        align-items: flex-start;
       }
-      .upload-panel form {
+      .workspace-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .share-link-row {
         flex-direction: column;
         align-items: stretch;
-      }
-      .toast {
-        left: 1rem;
-        right: 1rem;
-      }
-      .zoom-controls {
-        flex-direction: column;
-        align-items: stretch;
-        border-radius: 16px;
-        gap: 0.5rem;
-        width: calc(100% - 2rem);
-        bottom: 1rem;
-        padding: 0.75rem 1rem;
       }
     }
   </style>
 </head>
-<body>
+<body data-shared-mode="{{if .SharedMode}}true{{else}}false{{end}}" data-active-folder="{{if .ActiveFolder}}{{.ActiveFolder.Slug}}{{end}}" data-active-folder-id="{{if .ActiveFolder}}{{.ActiveFolder.ID}}{{end}}" data-active-folder-visibility="{{if .ActiveFolder}}{{.ActiveFolder.Visibility}}{{end}}" data-active-folder-share-token="{{if .ActiveFolder}}{{.ActiveFolder.SharedToken}}{{end}}" data-active-folder-share-url="{{if .ActiveFolder}}{{.ActiveFolder.ShareURL}}{{end}}" data-active-folder-share-views="{{if .ActiveFolder}}{{.ActiveFolder.SharedViews}}{{end}}">
   <header class="topbar">
     <div class="brand">Galeria zdjec</div>
     <div class="top-actions">
-      {{if .LoggedIn}}
-      <label for="quickUploadInput" class="btn btn-primary" id="quickUploadTrigger">Dodaj zdjecie</label>
+      {{if and .AllowFolderManagement .ActiveFolder (not .SharedMode)}}
+      <label for="quickUploadInput" class="btn btn-primary" id="quickUploadTrigger">Szybkie dodawanie</label>
       <input type="file" id="quickUploadInput" class="hidden-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.avif">
+      {{end}}
+      {{if .LoggedIn}}
       <button id="logoutButton" class="btn btn-secondary" type="button">Wyloguj</button>
       {{else}}
       <button id="loginButton" class="btn btn-primary" type="button">Zaloguj</button>
@@ -398,27 +504,106 @@ const pageTemplate = `<!DOCTYPE html>
     </div>
   </header>
   <main class="page">
-    {{if .Images}}
-    <section class="gallery">
-      {{range .Images}}
-      <div class="tile" data-name="{{.Name}}">
-        <button type="button" class="thumb" data-src="{{.URL}}" aria-label="Zobacz {{.Name}}">
-          <img src="{{.URL}}" alt="{{.Name}}">
+    {{if not .SharedMode}}
+    <section class="section-card folders-panel">
+      <div class="section-header">
+        <div>
+          <h2>Foldery</h2>
+          <p>Wybierz katalog, aby zobaczyc jego pliki.</p>
+        </div>
+        {{if .AllowFolderManagement}}
+        <button class="btn btn-secondary" type="button" id="newFolderButton">Nowy folder</button>
+        {{end}}
+      </div>
+      {{if .Folders}}
+      <div class="folders-grid">
+        {{range .Folders}}
+        <button type="button" class="folder-card {{if and $.ActiveFolder (eq $.ActiveFolder.Slug .Slug)}}active{{end}}" data-slug="{{.Slug}}">
+          <div class="folder-name">{{.Name}}</div>
+          <div class="folder-meta">
+            <span class="badge {{.Visibility}}">
+              {{if eq .Visibility "public"}}Publiczny{{else if eq .Visibility "shared"}}Udostepniony{{else}}Prywatny{{end}}
+            </span>
+            {{if eq .Visibility "shared"}}
+            <span>{{.SharedViews}} wejsc</span>
+            {{end}}
+          </div>
         </button>
-        <div class="tile-meta">
-          <span class="filename" title="{{.Name}}">{{.Name}}</span>
-          {{if $.LoggedIn}}
-          <button type="button" class="delete-btn" data-name="{{.Name}}">Usun</button>
+        {{end}}
+      </div>
+      {{else}}
+      <p class="empty-state">Brak folderow. Zaloguj sie, aby utworzyc pierwszy.</p>
+      {{end}}
+    </section>
+    {{end}}
+
+    <section class="section-card workspace {{if not .ActiveFolder}}workspace-empty{{end}}" id="workspace">
+      {{if .ActiveFolder}}
+      <div class="workspace-header">
+        <div>
+          <h2>{{.ActiveFolder.Name}}</h2>
+          <p class="workspace-subtitle">
+            {{if eq .ActiveFolder.Visibility "public"}}Folder widoczny dla wszystkich uzytkownikow.{{else if eq .ActiveFolder.Visibility "shared"}}Folder udostepniony przez tajny link.{{else}}Folder widoczny tylko po zalogowaniu.{{end}}
+          </p>
+        </div>
+        <div class="workspace-actions">
+          <span class="badge {{.ActiveFolder.Visibility}}">
+            {{if eq .ActiveFolder.Visibility "public"}}Publiczny{{else if eq .ActiveFolder.Visibility "shared"}}Udostepniony{{else}}Prywatny{{end}}
+          </span>
+          {{if .SharedMode}}
+          <span class="badge shared">Tryb linku</span>
+          {{end}}
+          {{if and .AllowFolderManagement (not .SharedMode)}}
+          <button class="btn btn-secondary" type="button" id="folderSettingsButton">Ustawienia folderu</button>
           {{end}}
         </div>
       </div>
+
+      {{if and .AllowFolderManagement (not .SharedMode)}}
+      <div class="upload-panel">
+        <form id="uploadForm">
+          <input type="hidden" name="folder" value="{{.ActiveFolder.Slug}}">
+          <input type="file" name="file" required accept=".jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.avif">
+          <input type="text" name="name" placeholder="Nazwa pliku (opcjonalnie)">
+          <button class="submit-btn" type="submit">Przeslij</button>
+        </form>
+      </div>
+      {{else if .SharedMode}}
+      <div class="info-panel">Ten folder jest udostepniony tylko do odczytu.</div>
+      {{else if not .LoggedIn}}
+      <div class="info-panel">Zaloguj sie, aby zarzadzac plikami w tym folderze.</div>
+      {{end}}
+
+      {{if .Images}}
+      <section class="gallery" data-folder="{{.ActiveFolder.Slug}}">
+        {{range .Images}}
+        <div class="tile" data-name="{{.Name}}">
+          <button type="button" class="thumb" data-src="{{.URL}}" aria-label="Zobacz {{.Name}}">
+            <img src="{{.URL}}" alt="{{.Name}}">
+          </button>
+          <div class="tile-meta">
+            <span class="filename" title="{{.Name}}">{{.Name}}</span>
+            {{if $.AllowFolderManagement}}
+            <button type="button" class="delete-btn" data-name="{{.Name}}" data-folder="{{$.ActiveFolder.Slug}}">Usun</button>
+            {{end}}
+          </div>
+        </div>
+        {{end}}
+      </section>
+      {{else}}
+      <p class="empty">Brak obrazow w tym folderze.</p>
+      {{end}}
+      {{else}}
+      <div class="empty-state large">
+        {{if .SharedMode}}
+        Folder nie jest juz udostepniony lub link wygasl.
+        {{else}}
+        Wybierz folder z listy powyzej, aby zobaczyc jego zawartosc.
+        {{end}}
+      </div>
       {{end}}
     </section>
-    {{else}}
-    <p class="empty">Brak obrazow w katalogu.</p>
-    {{end}}
   </main>
-
   <div class="fullscreen-backdrop" id="backdrop" role="dialog" aria-modal="true">
     <div class="fullscreen-content">
       <img id="fullImage" alt="">
@@ -448,9 +633,66 @@ const pageTemplate = `<!DOCTYPE html>
     </form>
   </div>
 
+  <div class="modal-backdrop" id="newFolderModal">
+    <form class="modal" id="newFolderForm" autocomplete="off">
+      <h2>Nowy folder</h2>
+      <label>
+        Nazwa folderu
+        <input type="text" name="name" placeholder="np. Klienci Q4" required>
+      </label>
+      <div class="modal-actions">
+        <button class="primary" type="submit">Utworz</button>
+        <button class="ghost" type="button" id="newFolderCancel">Anuluj</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" id="folderSettingsModal">
+    <form class="modal" id="folderSettingsForm">
+      <h2>Ustawienia folderu</h2>
+      <label>
+        <strong>Widocznosc</strong>
+        <div>
+          <label><input type="radio" name="visibility" value="public"> Publiczny - widoczny dla kazdego</label>
+          <label><input type="radio" name="visibility" value="shared"> Udostepniony - tylko przez link</label>
+          <label><input type="radio" name="visibility" value="private"> Prywatny - wymagane logowanie</label>
+        </div>
+      </label>
+      <div class="share-details" id="shareDetails" hidden>
+        <strong>Udostepniony link</strong>
+        <div class="share-link-row">
+          <code id="shareLinkValue"></code>
+          <button type="button" class="ghost" id="copyShareLink">Kopiuj</button>
+        </div>
+        <div class="share-link-row">
+          <span>Wejscia: <strong id="shareViewsValue">0</strong></span>
+          <button type="button" class="ghost" id="regenerateLinkButton">Nowy link</button>
+          <button type="button" class="ghost" id="downloadQrButton">Pobierz QR</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="primary" type="submit">Zapisz</button>
+        <button class="ghost" type="button" id="folderSettingsCancel">Zamknij</button>
+      </div>
+    </form>
+  </div>
+
   <div class="toast" id="statusMessage" role="status" aria-live="polite"></div>
 
   <script>
+    const state = (() => {
+      const dataset = document.body?.dataset || {};
+      return {
+        sharedMode: dataset.sharedMode === 'true',
+        activeFolder: dataset.activeFolder || '',
+        activeFolderId: Number(dataset.activeFolderId || 0),
+        activeFolderVisibility: dataset.activeFolderVisibility || '',
+        activeFolderShareToken: dataset.activeFolderShareToken || '',
+        activeFolderShareUrl: dataset.activeFolderShareUrl || '',
+        activeFolderShareViews: Number(dataset.activeFolderShareViews || 0)
+      };
+    })();
+
     const backdrop = document.getElementById('backdrop');
     const fullImage = document.getElementById('fullImage');
     const loginModal = document.getElementById('loginModal');
@@ -460,10 +702,25 @@ const pageTemplate = `<!DOCTYPE html>
     const loginCancel = document.getElementById('loginCancel');
     const uploadForm = document.getElementById('uploadForm');
     const quickUploadInput = document.getElementById('quickUploadInput');
+    const quickUploadTrigger = document.getElementById('quickUploadTrigger');
     const messageEl = document.getElementById('statusMessage');
     const zoomSlider = document.getElementById('zoomSlider');
     const zoomControls = document.getElementById('zoomControls');
     const zoomValue = document.getElementById('zoomValue');
+    const newFolderButton = document.getElementById('newFolderButton');
+    const newFolderModal = document.getElementById('newFolderModal');
+    const newFolderForm = document.getElementById('newFolderForm');
+    const newFolderCancel = document.getElementById('newFolderCancel');
+    const folderSettingsButton = document.getElementById('folderSettingsButton');
+    const folderSettingsModal = document.getElementById('folderSettingsModal');
+    const folderSettingsForm = document.getElementById('folderSettingsForm');
+    const folderSettingsCancel = document.getElementById('folderSettingsCancel');
+    const shareDetails = document.getElementById('shareDetails');
+    const shareLinkValue = document.getElementById('shareLinkValue');
+    const shareViewsValue = document.getElementById('shareViewsValue');
+    const copyShareLink = document.getElementById('copyShareLink');
+    const regenerateLinkButton = document.getElementById('regenerateLinkButton');
+    const downloadQrButton = document.getElementById('downloadQrButton');
     let hideToast;
 
     function showMessage(text, type = 'info') {
@@ -475,6 +732,14 @@ const pageTemplate = `<!DOCTYPE html>
       hideToast = setTimeout(() => {
         messageEl.classList.remove('visible');
       }, 4000);
+    }
+
+    function openModal(modal) {
+      modal?.classList.add('active');
+    }
+
+    function closeModal(modal) {
+      modal?.classList.remove('active');
     }
 
     function setZoom(value) {
@@ -494,6 +759,7 @@ const pageTemplate = `<!DOCTYPE html>
     }
 
     function openFullscreen(src, alt) {
+      if (!backdrop || !fullImage) return;
       fullImage.src = src;
       fullImage.alt = alt;
       resetZoom();
@@ -504,20 +770,22 @@ const pageTemplate = `<!DOCTYPE html>
     }
 
     function closeFullscreen() {
-      backdrop.classList.remove('active');
+      backdrop?.classList.remove('active');
       if (zoomControls) {
         zoomControls.hidden = true;
       }
       resetZoom();
-      fullImage.src = '';
-      fullImage.alt = '';
+      if (fullImage) {
+        fullImage.src = '';
+        fullImage.alt = '';
+      }
     }
 
     document.querySelectorAll('.thumb').forEach(btn => {
       btn.addEventListener('click', () => {
         const src = btn.dataset.src;
         const alt = btn.closest('.tile')?.dataset.name || '';
-        if (backdrop.classList.contains('active') && fullImage.src.endsWith(src)) {
+        if (backdrop?.classList.contains('active') && fullImage?.src.endsWith(src)) {
           closeFullscreen();
         } else {
           openFullscreen(src, alt);
@@ -525,39 +793,14 @@ const pageTemplate = `<!DOCTYPE html>
       });
     });
 
-    backdrop.addEventListener('click', closeFullscreen);
+    backdrop?.addEventListener('click', closeFullscreen);
+
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
-        if (backdrop.classList.contains('active')) {
-          closeFullscreen();
-        }
-        if (loginModal.classList.contains('active')) {
-          loginModal.classList.remove('active');
-        }
+        closeFullscreen();
+        [loginModal, newFolderModal, folderSettingsModal].forEach(closeModal);
       }
     });
-
-    if (loginButton) {
-      loginButton.addEventListener('click', () => {
-        loginModal.classList.add('active');
-        loginForm.reset();
-        loginForm.querySelector('input[name="username"]').focus();
-      });
-    }
-
-    if (loginCancel) {
-      loginCancel.addEventListener('click', () => {
-        loginModal.classList.remove('active');
-      });
-    }
-
-    if (loginModal) {
-      loginModal.addEventListener('click', event => {
-        if (event.target === loginModal) {
-          loginModal.classList.remove('active');
-        }
-      });
-    }
 
     async function fetchJSON(url, options = {}) {
       const response = await fetch(url, options);
@@ -574,6 +817,15 @@ const pageTemplate = `<!DOCTYPE html>
       }
       return data;
     }
+    if (loginButton) {
+      loginButton.addEventListener('click', () => {
+        openModal(loginModal);
+        loginForm?.reset();
+        loginForm?.querySelector('input[name="username"]')?.focus();
+      });
+    }
+
+    loginCancel?.addEventListener('click', () => closeModal(loginModal));
 
     if (loginForm) {
       loginForm.addEventListener('submit', async event => {
@@ -596,21 +848,31 @@ const pageTemplate = `<!DOCTYPE html>
       });
     }
 
-    if (logoutButton) {
-      logoutButton.addEventListener('click', async () => {
-        try {
-          await fetchJSON('/api/logout', { method: 'POST' });
-          window.location.reload();
-        } catch (err) {
-          showMessage(err.message, 'error');
-        }
+    logoutButton?.addEventListener('click', async () => {
+      try {
+        await fetchJSON('/api/logout', { method: 'POST' });
+        window.location.reload();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+
+    document.querySelectorAll('.folder-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const slug = card.dataset.slug;
+        if (!slug) return;
+        window.location.href = '/?folder=' + encodeURIComponent(slug);
       });
-    }
+    });
 
     if (uploadForm) {
       uploadForm.addEventListener('submit', async event => {
         event.preventDefault();
         const formData = new FormData(uploadForm);
+        if (!formData.get('folder')) {
+          showMessage('Najpierw wybierz folder', 'error');
+          return;
+        }
         try {
           await fetchJSON('/api/upload', {
             method: 'POST',
@@ -628,7 +890,13 @@ const pageTemplate = `<!DOCTYPE html>
         if (!quickUploadInput.files.length) {
           return;
         }
+        if (!state.activeFolder) {
+          showMessage('Wybierz aktywny folder przed przeslaniem pliku', 'error');
+          quickUploadInput.value = '';
+          return;
+        }
         const formData = new FormData();
+        formData.append('folder', state.activeFolder);
         formData.append('file', quickUploadInput.files[0]);
         try {
           await fetchJSON('/api/upload', {
@@ -642,7 +910,33 @@ const pageTemplate = `<!DOCTYPE html>
           quickUploadInput.value = '';
         }
       });
+    } else if (quickUploadTrigger && !state.activeFolder) {
+      quickUploadTrigger.setAttribute('aria-disabled', 'true');
     }
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async event => {
+        event.stopPropagation();
+        const name = btn.dataset.name;
+        const folder = btn.dataset.folder || state.activeFolder;
+        if (!name || !folder) {
+          showMessage('Nie mozna usunac bez folderu', 'error');
+          return;
+        }
+        const confirmed = confirm('Czy na pewno chcesz usunac plik "' + name + '"?');
+        if (!confirmed) return;
+        try {
+          await fetchJSON('/api/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, folder})
+          });
+          window.location.reload();
+        } catch (err) {
+          showMessage(err.message, 'error');
+        }
+      });
+    });
 
     if (zoomSlider) {
       zoomSlider.addEventListener('input', () => {
@@ -658,25 +952,121 @@ const pageTemplate = `<!DOCTYPE html>
         });
       });
     }
+    newFolderButton?.addEventListener('click', () => {
+      newFolderForm?.reset();
+      openModal(newFolderModal);
+      newFolderForm?.querySelector('input[name="name"]')?.focus();
+    });
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', async event => {
-        event.stopPropagation();
-        const name = btn.dataset.name;
-        if (!name) return;
-        const confirmed = confirm('Czy na pewno chcesz usunac plik "' + name + '"?');
-        if (!confirmed) return;
+    newFolderCancel?.addEventListener('click', () => closeModal(newFolderModal));
+
+    if (newFolderForm) {
+      newFolderForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const formData = new FormData(newFolderForm);
+        const payload = { name: formData.get('name') };
         try {
-          await fetchJSON('/api/delete', {
+          const folder = await fetchJSON('/api/folders', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name})
+            body: JSON.stringify(payload)
           });
-          window.location.reload();
+          closeModal(newFolderModal);
+          const slug = folder.slug || folder.Slug;
+          window.location.href = slug ? '/?folder=' + encodeURIComponent(slug) : window.location.href;
         } catch (err) {
           showMessage(err.message, 'error');
         }
       });
+    }
+
+    function updateShareDetails(data) {
+      if (!shareDetails) return;
+      if (data.visibility !== 'shared') {
+        shareDetails.hidden = true;
+        return;
+      }
+      shareDetails.hidden = false;
+      const link = data.shareUrl || (data.sharedToken ? window.location.origin + '/shared/' + data.sharedToken : '');
+      shareLinkValue.textContent = link || 'Brak linku';
+      shareLinkValue.dataset.link = link;
+      shareViewsValue.textContent = String(data.sharedViews ?? 0);
+      copyShareLink.disabled = !link;
+      regenerateLinkButton.disabled = !data.id;
+      downloadQrButton.disabled = !data.id;
+    }
+
+    function currentFolderData() {
+      return {
+        id: state.activeFolderId,
+        visibility: state.activeFolderVisibility || 'private',
+        sharedToken: state.activeFolderShareToken || '',
+        shareUrl: state.activeFolderShareUrl || '',
+        sharedViews: state.activeFolderShareViews || 0
+      };
+    }
+
+    folderSettingsButton?.addEventListener('click', () => {
+      if (!state.activeFolderId) {
+        showMessage('Brak wybranego folderu', 'error');
+        return;
+      }
+      const data = currentFolderData();
+      folderSettingsForm?.querySelectorAll('input[name="visibility"]').forEach(radio => {
+        radio.checked = radio.value === data.visibility;
+      });
+      updateShareDetails({...data, visibility: data.visibility});
+      openModal(folderSettingsModal);
+    });
+
+    folderSettingsCancel?.addEventListener('click', () => closeModal(folderSettingsModal));
+
+    folderSettingsForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!state.activeFolderId) return;
+      const visibility = folderSettingsForm.elements['visibility'].value;
+      try {
+        await fetchJSON('/api/folders/' + state.activeFolderId, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({visibility})
+        });
+        window.location.reload();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+    regenerateLinkButton?.addEventListener('click', async () => {
+      if (!state.activeFolderId) return;
+      try {
+        await fetchJSON('/api/folders/' + state.activeFolderId, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({regenerateLink: true})
+        });
+        window.location.reload();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+
+    downloadQrButton?.addEventListener('click', () => {
+      if (!state.activeFolderId) return;
+      window.open('/api/folders/' + state.activeFolderId + '/qr', '_blank');
+    });
+
+    copyShareLink?.addEventListener('click', async () => {
+      const link = shareLinkValue?.dataset.link;
+      if (!link) {
+        showMessage('Brak linku do skopiowania', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(link);
+        showMessage('Skopiowano link');
+      } catch (_) {
+        showMessage('Nie udalo sie skopiowac linku', 'error');
+      }
     });
   </script>
 </body>

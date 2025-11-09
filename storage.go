@@ -10,10 +10,20 @@ import (
 	"strings"
 )
 
-func listImages(dir string) ([]imageInfo, error) {
+func listImages(dir, urlPrefix string) ([]imageInfo, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
+	}
+
+	if urlPrefix == "" {
+		urlPrefix = "/images/"
+	}
+	if !strings.HasSuffix(urlPrefix, "/") {
+		urlPrefix += "/"
 	}
 
 	var images []imageInfo
@@ -27,7 +37,7 @@ func listImages(dir string) ([]imageInfo, error) {
 		escaped := url.PathEscape(entry.Name())
 		images = append(images, imageInfo{
 			Name: entry.Name(),
-			URL:  "/images/" + escaped,
+			URL:  urlPrefix + escaped,
 		})
 	}
 

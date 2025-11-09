@@ -1,3 +1,4 @@
 /galery
 *.exe
 logs
+gallery.db

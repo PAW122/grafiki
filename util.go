@@ -32,3 +32,17 @@ func addressForLog(addr string) string {
 	}
 	return addr
 }
+
+func requestBaseURL(r *http.Request) string {
+	scheme := "http"
+	if proto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); proto != "" {
+		scheme = proto
+	} else if r.TLS != nil {
+		scheme = "https"
+	}
+	host := strings.TrimSpace(r.Host)
+	if host == "" {
+		host = "localhost"
+	}
+	return scheme + "://" + host
+}

@@ -40,6 +40,13 @@ func main() {
 		log.Printf("Created default config at %s (edit to change admin credentials)", configPath)
 	}
 
+	dbPath := filepath.Join(filepath.Dir(configPath), defaultDatabaseName)
+	db, err := openDatabase(dbPath)
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+	defer db.Close()
+
 	logsPath := filepath.Join(filepath.Dir(configPath), "logs")
 	reqLogger, err := newRequestLogger(logsPath)
 	if err != nil {
@@ -54,6 +61,7 @@ func main() {
 		tmpl:     tmpl,
 		sessions: newSessionStore(24 * time.Hour),
 		logger:   reqLogger,
+		db:       db,
 	}
 
 	mux := http.NewServeMux()
@@ -63,6 +71,9 @@ func main() {
 	mux.HandleFunc("/api/logout", srv.handleLogout)
 	mux.HandleFunc("/api/upload", srv.handleUpload)
 	mux.HandleFunc("/api/delete", srv.handleDelete)
+	mux.HandleFunc("/api/folders", srv.handleFolders)
+	mux.HandleFunc("/api/folders/", srv.handleFolderByID)
+	mux.HandleFunc("/shared/", srv.handleSharedFolder)
 
 	log.Printf("Serving gallery from %s at http://%s (config: %s, logs: %s)", dir, addressForLog(*addrFlag), configPath, logsPath)
 	if err := http.ListenAndServe(*addrFlag, mux); err != nil {

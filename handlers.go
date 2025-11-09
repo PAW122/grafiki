@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -8,7 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/skip2/go-qrcode"
 )
 
 func (s *server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +73,31 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	folderSlug := strings.TrimSpace(r.FormValue("folder"))
+	if folderSlug == "" {
+		writeJSONError(w, http.StatusBadRequest, "Wybierz folder docelowy")
+		return
+	}
+	folder, err := s.getFolderBySlug(folderSlug)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusBadRequest, "Folder nie istnieje")
+			return
+		}
+		log.Printf("folder lookup: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie sprawdzic folderu")
+		return
+	}
+
+	targetDir := s.dir
+	if folder.Path != "" {
+		targetDir = filepath.Join(targetDir, folder.Path)
+	}
+	if err := ensureDir(targetDir); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie przygotowac folderu")
+		return
+	}
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "Nie znaleziono pliku w formularzu")
@@ -102,7 +131,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target, err := uniqueFilename(s.dir, filename)
+	target, err := uniqueFilename(targetDir, filename)
 	if err != nil {
 		log.Printf("uniqueFilename: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "Blad podczas zapisu pliku")
@@ -130,6 +159,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
 		"name":   filepath.Base(target),
+		"folder": folderSlug,
 	})
 }
 
@@ -145,10 +175,22 @@ func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Name string `json:"name"`
+		Name   string `json:"name"`
+		Folder string `json:"folder"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" {
-		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowy plik do usuniecia")
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Folder) == "" {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowe dane")
+		return
+	}
+
+	folder, err := s.getFolderBySlug(strings.TrimSpace(req.Folder))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusBadRequest, "Folder nie istnieje")
+			return
+		}
+		log.Printf("folder lookup: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie sprawdzic folderu")
 		return
 	}
 
@@ -158,8 +200,12 @@ func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target := filepath.Join(s.dir, filename)
-	cleanDir := filepath.Clean(s.dir)
+	targetDir := s.dir
+	if folder.Path != "" {
+		targetDir = filepath.Join(targetDir, folder.Path)
+	}
+	target := filepath.Join(targetDir, filename)
+	cleanDir := filepath.Clean(targetDir)
 	cleanTarget := filepath.Clean(target)
 	if cleanTarget != cleanDir && !strings.HasPrefix(cleanTarget, cleanDir+string(os.PathSeparator)) {
 		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowy plik")
@@ -181,4 +227,253 @@ func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *server) handleFolders(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleListFoldersAPI(w, r)
+	case http.MethodPost:
+		s.handleCreateFolderAPI(w, r)
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
+	}
+}
+
+func (s *server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/folders/")
+	path = strings.Trim(path, "/")
+	if path == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	parts := strings.Split(path, "/")
+	id, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowy folder")
+		return
+	}
+
+	if len(parts) == 2 && parts[1] == "qr" {
+		s.handleFolderQR(w, r, id)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetFolderAPI(w, r, id)
+	case http.MethodPatch:
+		s.handleUpdateFolderAPI(w, r, id)
+	default:
+		w.Header().Set("Allow", "GET, PATCH")
+		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
+	}
+}
+
+func (s *server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
+	if !s.sessions.authenticated(r) {
+		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowe dane")
+		return
+	}
+	folder, err := s.createFolder(req.Name)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	view := folder.toView(requestBaseURL(r))
+	writeJSON(w, http.StatusCreated, view)
+}
+
+func (s *server) handleListFoldersAPI(w http.ResponseWriter, r *http.Request) {
+	loggedIn := s.sessions.authenticated(r)
+	folders, err := s.listFolders(loggedIn)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderow")
+		return
+	}
+
+	baseURL := requestBaseURL(r)
+	var views []folderView
+	for _, folder := range folders {
+		views = append(views, folder.toView(baseURL))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"folders": views})
+}
+
+func (s *server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+	folder, err := s.getFolderByID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusNotFound, "Folder nie istnieje")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderu")
+		return
+	}
+	loggedIn := s.sessions.authenticated(r)
+	if !s.canAccessFolder(folder, loggedIn) {
+		writeJSONError(w, http.StatusForbidden, "Brak dostepu")
+		return
+	}
+	writeJSON(w, http.StatusOK, folder.toView(requestBaseURL(r)))
+}
+
+func (s *server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+	if !s.sessions.authenticated(r) {
+		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
+		return
+	}
+
+	var req struct {
+		Visibility     string `json:"visibility"`
+		RegenerateLink bool   `json:"regenerateLink"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowe dane")
+		return
+	}
+
+	var folder *folderRecord
+	var err error
+
+	if req.Visibility != "" {
+		folder, err = s.updateFolderVisibility(id, req.Visibility)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	} else {
+		folder, err = s.getFolderByID(id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeJSONError(w, http.StatusNotFound, "Folder nie istnieje")
+				return
+			}
+			writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderu")
+			return
+		}
+	}
+
+	if req.RegenerateLink {
+		if folder.Visibility != visibilityShared {
+			writeJSONError(w, http.StatusBadRequest, "Folder nie jest ustawiony jako udostepniony")
+			return
+		}
+		folder, err = s.regenerateSharedToken(id)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie odswiezyc linku")
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, folder.toView(requestBaseURL(r)))
+}
+
+func (s *server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64) {
+	if !s.sessions.authenticated(r) {
+		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
+		return
+	}
+	folder, err := s.getFolderByID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusNotFound, "Folder nie istnieje")
+			return
+		}
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderu")
+		return
+	}
+	if folder.Visibility != visibilityShared {
+		writeJSONError(w, http.StatusBadRequest, "Folder nie ma udostepnionego linku")
+		return
+	}
+	token := ""
+	if folder.SharedToken.Valid {
+		token = folder.SharedToken.String
+	}
+	if token == "" {
+		token, err = s.ensureSharedToken(folder.ID)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie przygotowac linku")
+			return
+		}
+		folder, _ = s.getFolderByID(folder.ID)
+	}
+
+	link := requestBaseURL(r) + "/shared/" + token
+	png, err := qrcode.Encode(link, qrcode.Medium, 256)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie wygenerowac QR")
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"folder-"+folder.Slug+"-qr.png\"")
+	if _, err := w.Write(png); err != nil {
+		log.Printf("write qr: %v", err)
+	}
+}
+
+func (s *server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := strings.TrimPrefix(r.URL.Path, "/shared/")
+	token = strings.Trim(token, "/")
+	if token == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	folder, err := s.getFolderByToken(token)
+	if err != nil || folder.Visibility != visibilityShared {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := s.incrementSharedViews(folder.ID); err != nil {
+		log.Printf("shared view: %v", err)
+	} else {
+		folder.SharedViews++
+	}
+
+	baseURL := requestBaseURL(r)
+	view := folder.toView(baseURL)
+
+	images, err := s.imagesForFolder(folder)
+	if err != nil {
+		log.Printf("listImages: %v", err)
+		http.Error(w, "failed to load images", http.StatusInternalServerError)
+		return
+	}
+
+	data := pageData{
+		Images:                images,
+		LoggedIn:              s.sessions.authenticated(r),
+		Folders:               nil,
+		ActiveFolder:          &view,
+		SharedMode:            true,
+		BaseURL:               baseURL,
+		AllowFolderManagement: false,
+	}
+
+	if s.logger != nil {
+		s.logger.Log(r, "folderlink")
+	}
+
+	if err := s.tmpl.Execute(w, data); err != nil {
+		log.Printf("template execute: %v", err)
+	}
 }
