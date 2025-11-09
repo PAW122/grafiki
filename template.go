@@ -389,13 +389,18 @@ const pageTemplate = `<!DOCTYPE html>
       border-radius: 24px;
       padding: 1.75rem 2rem;
       width: min(460px, 92vw);
+      max-height: min(90vh, 720px);
+      margin: 0.5rem;
       display: flex;
       flex-direction: column;
       gap: 1.1rem;
       box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+      overflow-y: auto;
+      scrollbar-width: thin;
     }
     .modal.modal-large {
       width: min(640px, 94vw);
+      max-height: min(92vh, 760px);
       padding: 2rem 2.35rem;
       gap: 1.35rem;
     }
@@ -554,6 +559,13 @@ const pageTemplate = `<!DOCTYPE html>
       .share-link-row {
         flex-direction: column;
         align-items: stretch;
+      }
+      .modal,
+      .modal.modal-large {
+        width: calc(100% - 1rem);
+        margin: 0.5rem;
+        max-height: 90vh;
+        padding: 1.5rem 1.25rem;
       }
     }
   </style>
