@@ -33,20 +33,12 @@ func (s *SessionStore) start(w http.ResponseWriter) error {
 	s.tokens[token] = expires
 	s.mu.Unlock()
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(s.ttl.Seconds()),
-		Expires:  expires,
-	})
+	setSessionCookie(w, token, expires, s.ttl)
 
 	return nil
 }
 
-func (s *SessionStore) authenticated(r *http.Request) bool {
+func (s *SessionStore) authenticated(w http.ResponseWriter, r *http.Request) bool {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return false
@@ -62,6 +54,13 @@ func (s *SessionStore) authenticated(r *http.Request) bool {
 	if time.Now().After(expiry) {
 		delete(s.tokens, cookie.Value)
 		return false
+	}
+
+	newExpiry := time.Now().Add(s.ttl)
+	s.tokens[cookie.Value] = newExpiry
+
+	if w != nil {
+		setSessionCookie(w, cookie.Value, newExpiry, s.ttl)
 	}
 	return true
 }
@@ -82,5 +81,17 @@ func (s *SessionStore) clear(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func setSessionCookie(w http.ResponseWriter, token string, expires time.Time, ttl time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(ttl.Seconds()),
+		Expires:  expires,
 	})
 }

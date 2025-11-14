@@ -52,7 +52,7 @@ func (s *Server) renderSubmissionPublic(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	if group.Visibility == visibilityPrivate && !loggedIn {
 		http.NotFound(w, r)
 		return
@@ -92,7 +92,7 @@ func (s *Server) renderSubmissionShared(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	viewerToken := s.ensureSubmissionViewerToken(w, r)
 	baseURL := requestBaseURL(r)
 
@@ -131,7 +131,7 @@ func (s *Server) handleSubmissionUpload(w http.ResponseWriter, r *http.Request) 
 	}
 
 	viewerToken := s.ensureSubmissionViewerToken(w, r)
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 
 	r.Body = http.MaxBytesReader(w, r.Body, submissionUploadMaxSize)
 	if err := r.ParseMultipartForm(submissionUploadMaxSize); err != nil {
@@ -248,7 +248,7 @@ func (s *Server) handleSubmissionUpload(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleSubmissionGroups(w http.ResponseWriter, r *http.Request) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -287,7 +287,7 @@ func (s *Server) handleSubmissionGroups(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleSubmissionGroupByID(w http.ResponseWriter, r *http.Request) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -400,7 +400,7 @@ func (s *Server) handleSubmissionFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	viewerToken := submissionViewerTokenFromRequest(r)
 
 	switch group.Visibility {

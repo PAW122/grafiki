@@ -102,7 +102,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pathSlug := strings.Trim(r.URL.Path, "/")
 	viewParam := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("view")))
 	if pathSlug == "" && viewParam == "submitted" {
-		if !s.sessions.authenticated(r) {
+		if !s.sessions.authenticated(w, r) {
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
@@ -134,7 +134,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.logger.Log(r, "wyswietl")
 	}
 
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	baseURL := requestBaseURL(r)
 
 	folders, err := s.listFolders(loggedIn)
@@ -194,7 +194,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) renderSubmittedDashboard(w http.ResponseWriter, r *http.Request) {
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	if !loggedIn {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return

@@ -73,7 +73,7 @@ func main() {
 		Dir:      dir,
 		Config:   cfg,
 		Template: tmpl,
-		Sessions: app.NewSessionStore(24 * time.Hour),
+		Sessions: app.NewSessionStore(15 * time.Minute),
 		Logger:   reqLogger,
 		DB:       db,
 		Favicon:  faviconPath,

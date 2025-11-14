@@ -62,7 +62,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
 		return
 	}
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -169,7 +169,7 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
 		return
 	}
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -235,7 +235,7 @@ func (s *Server) handleRenameImage(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
 		return
 	}
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -409,7 +409,7 @@ func (s *Server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -430,7 +430,7 @@ func (s *Server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListFoldersAPI(w http.ResponseWriter, r *http.Request) {
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	folders, err := s.listFolders(loggedIn)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderow")
@@ -455,7 +455,7 @@ func (s *Server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id i
 		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie pobrac folderu")
 		return
 	}
-	loggedIn := s.sessions.authenticated(r)
+	loggedIn := s.sessions.authenticated(w, r)
 	if !s.canAccessFolder(folder, loggedIn) {
 		writeJSONError(w, http.StatusForbidden, "Brak dostepu")
 		return
@@ -464,7 +464,7 @@ func (s *Server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id i
 }
 
 func (s *Server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -536,7 +536,7 @@ func (s *Server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, i
 }
 
 func (s *Server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -564,7 +564,7 @@ func (s *Server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, i
 }
 
 func (s *Server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64) {
-	if !s.sessions.authenticated(r) {
+	if !s.sessions.authenticated(w, r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
 	}
@@ -647,7 +647,7 @@ func (s *Server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
 	data := pageData{
 		View:                  "gallery",
 		Images:                images,
-		LoggedIn:              s.sessions.authenticated(r),
+		LoggedIn:              s.sessions.authenticated(w, r),
 		Folders:               nil,
 		ActiveFolder:          &view,
 		SharedMode:            true,
