@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -54,6 +55,11 @@ func main() {
 	}
 	defer reqLogger.Close()
 
+	faviconPath := filepath.Join(filepath.Dir(configPath), "Tsu.ico")
+	if _, err := os.Stat(faviconPath); err != nil {
+		faviconPath = ""
+	}
+
 	tmpl := template.Must(template.New("gallery").Parse(pageTemplate))
 	srv := &server{
 		dir:      dir,
@@ -62,6 +68,7 @@ func main() {
 		sessions: newSessionStore(24 * time.Hour),
 		logger:   reqLogger,
 		db:       db,
+		favicon:  faviconPath,
 	}
 
 	mux := http.NewServeMux()
@@ -74,6 +81,7 @@ func main() {
 	mux.HandleFunc("/api/folders", srv.handleFolders)
 	mux.HandleFunc("/api/folders/", srv.handleFolderByID)
 	mux.HandleFunc("/shared/", srv.handleSharedFolder)
+	mux.HandleFunc("/favicon.ico", srv.handleFavicon)
 
 	log.Printf("Serving gallery from %s at http://%s (config: %s, logs: %s)", dir, addressForLog(*addrFlag), configPath, logsPath)
 	if err := http.ListenAndServe(*addrFlag, mux); err != nil {

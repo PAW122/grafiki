@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -32,6 +33,7 @@ type server struct {
 	sessions *sessionStore
 	logger   *requestLogger
 	db       *sql.DB
+	favicon  string
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -149,4 +151,21 @@ func (s *server) imagesForFolder(rec *folderRecord) ([]imageInfo, error) {
 		return nil, err
 	}
 	return listImages(dir, urlPrefix)
+}
+
+func (s *server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if strings.TrimSpace(s.favicon) == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if _, err := os.Stat(s.favicon); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeFile(w, r, s.favicon)
 }
