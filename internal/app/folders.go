@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"crypto/rand"
@@ -65,7 +65,7 @@ func (f folderRecord) toView(baseURL string) folderView {
 	return view
 }
 
-func (s *server) folderSlugExists(slug string) (bool, error) {
+func (s *Server) folderSlugExists(slug string) (bool, error) {
 	var exists int
 	err := s.db.QueryRow(`SELECT 1 FROM folders WHERE slug = ? LIMIT 1`, slug).Scan(&exists)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -77,7 +77,7 @@ func (s *server) folderSlugExists(slug string) (bool, error) {
 	return true, nil
 }
 
-func (s *server) createFolder(name string) (*folderRecord, error) {
+func (s *Server) createFolder(name string) (*folderRecord, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, errors.New("nazwa folderu jest wymagana")
@@ -105,7 +105,7 @@ func (s *server) createFolder(name string) (*folderRecord, error) {
 
 	relPath := slug
 	fullPath := filepath.Join(s.dir, relPath)
-	if err := ensureDir(fullPath); err != nil {
+	if err := EnsureDir(fullPath); err != nil {
 		return nil, err
 	}
 
@@ -121,7 +121,7 @@ func (s *server) createFolder(name string) (*folderRecord, error) {
 	return s.getFolderByID(id)
 }
 
-func (s *server) listFolders(loggedIn bool) ([]folderRecord, error) {
+func (s *Server) listFolders(loggedIn bool) ([]folderRecord, error) {
 	query := `SELECT id, name, slug, path, visibility, shared_token, shared_views FROM folders`
 	var args []any
 	if !loggedIn {
@@ -150,7 +150,7 @@ func (s *server) listFolders(loggedIn bool) ([]folderRecord, error) {
 	return folders, nil
 }
 
-func (s *server) getFolderBySlug(slug string) (*folderRecord, error) {
+func (s *Server) getFolderBySlug(slug string) (*folderRecord, error) {
 	var rec folderRecord
 	err := s.db.QueryRow(`SELECT id, name, slug, path, visibility, shared_token, shared_views FROM folders WHERE slug = ?`, slug).
 		Scan(&rec.ID, &rec.Name, &rec.Slug, &rec.Path, &rec.Visibility, &rec.SharedToken, &rec.SharedViews)
@@ -160,7 +160,7 @@ func (s *server) getFolderBySlug(slug string) (*folderRecord, error) {
 	return &rec, nil
 }
 
-func (s *server) getFolderByID(id int64) (*folderRecord, error) {
+func (s *Server) getFolderByID(id int64) (*folderRecord, error) {
 	var rec folderRecord
 	err := s.db.QueryRow(`SELECT id, name, slug, path, visibility, shared_token, shared_views FROM folders WHERE id = ?`, id).
 		Scan(&rec.ID, &rec.Name, &rec.Slug, &rec.Path, &rec.Visibility, &rec.SharedToken, &rec.SharedViews)
@@ -170,7 +170,7 @@ func (s *server) getFolderByID(id int64) (*folderRecord, error) {
 	return &rec, nil
 }
 
-func (s *server) getFolderByToken(token string) (*folderRecord, error) {
+func (s *Server) getFolderByToken(token string) (*folderRecord, error) {
 	var rec folderRecord
 	err := s.db.QueryRow(`SELECT id, name, slug, path, visibility, shared_token, shared_views FROM folders WHERE shared_token = ?`, token).
 		Scan(&rec.ID, &rec.Name, &rec.Slug, &rec.Path, &rec.Visibility, &rec.SharedToken, &rec.SharedViews)
@@ -180,7 +180,7 @@ func (s *server) getFolderByToken(token string) (*folderRecord, error) {
 	return &rec, nil
 }
 
-func (s *server) updateFolderVisibility(id int64, visibility string) (*folderRecord, error) {
+func (s *Server) updateFolderVisibility(id int64, visibility string) (*folderRecord, error) {
 	if _, ok := allowedVisibilities[visibility]; !ok {
 		return nil, errors.New("nieprawidlowy typ widocznosci")
 	}
@@ -205,7 +205,7 @@ func (s *server) updateFolderVisibility(id int64, visibility string) (*folderRec
 	return rec, nil
 }
 
-func (s *server) ensureSharedToken(id int64) (string, error) {
+func (s *Server) ensureSharedToken(id int64) (string, error) {
 	rec, err := s.getFolderByID(id)
 	if err != nil {
 		return "", err
@@ -223,7 +223,7 @@ func (s *server) ensureSharedToken(id int64) (string, error) {
 	return token, nil
 }
 
-func (s *server) regenerateSharedToken(id int64) (*folderRecord, error) {
+func (s *Server) regenerateSharedToken(id int64) (*folderRecord, error) {
 	token, err := randomToken()
 	if err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (s *server) regenerateSharedToken(id int64) (*folderRecord, error) {
 	return s.getFolderByID(id)
 }
 
-func (s *server) incrementSharedViews(id int64) error {
+func (s *Server) incrementSharedViews(id int64) error {
 	_, err := s.db.Exec(`UPDATE folders SET shared_views = shared_views + 1 WHERE id = ?`, id)
 	return err
 }
@@ -254,7 +254,7 @@ func folderURLPrefix(path string) string {
 	return strings.Trim(strings.ReplaceAll(filepath.ToSlash(path), "//", "/"), "/")
 }
 
-func (s *server) deleteFolder(id int64) error {
+func (s *Server) deleteFolder(id int64) error {
 	folder, err := s.getFolderByID(id)
 	if err != nil {
 		return err

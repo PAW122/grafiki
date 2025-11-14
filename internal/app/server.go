@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"database/sql"
@@ -10,6 +10,16 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+type ServerOptions struct {
+	Dir      string
+	Config   Config
+	Template *template.Template
+	Sessions *SessionStore
+	Logger   *RequestLogger
+	DB       *sql.DB
+	Favicon  string
+}
 
 type imageInfo struct {
 	Name string
@@ -26,17 +36,42 @@ type pageData struct {
 	BaseURL               string
 }
 
-type server struct {
+type Server struct {
 	dir      string
-	cfg      appConfig
+	cfg      Config
 	tmpl     *template.Template
-	sessions *sessionStore
-	logger   *requestLogger
+	sessions *SessionStore
+	logger   *RequestLogger
 	db       *sql.DB
 	favicon  string
 }
 
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewServer(opts ServerOptions) *Server {
+	return &Server{
+		dir:      opts.Dir,
+		cfg:      opts.Config,
+		tmpl:     opts.Template,
+		sessions: opts.Sessions,
+		logger:   opts.Logger,
+		db:       opts.DB,
+		favicon:  opts.Favicon,
+	}
+}
+
+func (s *Server) RegisterRoutes(mux *http.ServeMux) {
+	mux.Handle("/", s)
+	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(s.dir))))
+	mux.HandleFunc("/api/login", s.handleLogin)
+	mux.HandleFunc("/api/logout", s.handleLogout)
+	mux.HandleFunc("/api/upload", s.handleUpload)
+	mux.HandleFunc("/api/delete", s.handleDelete)
+	mux.HandleFunc("/api/folders", s.handleFolders)
+	mux.HandleFunc("/api/folders/", s.handleFolderByID)
+	mux.HandleFunc("/shared/", s.handleSharedFolder)
+	mux.HandleFunc("/favicon.ico", s.handleFavicon)
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -127,7 +162,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) canAccessFolder(rec *folderRecord, loggedIn bool) bool {
+func (s *Server) canAccessFolder(rec *folderRecord, loggedIn bool) bool {
 	switch rec.Visibility {
 	case visibilityPublic:
 		return true
@@ -140,20 +175,20 @@ func (s *server) canAccessFolder(rec *folderRecord, loggedIn bool) bool {
 	}
 }
 
-func (s *server) imagesForFolder(rec *folderRecord) ([]imageInfo, error) {
+func (s *Server) imagesForFolder(rec *folderRecord) ([]imageInfo, error) {
 	dir := s.dir
 	urlPrefix := "/images/"
 	if rec != nil && rec.Path != "" {
 		dir = filepath.Join(s.dir, rec.Path)
 		urlPrefix = "/images/" + folderURLPrefix(rec.Path) + "/"
 	}
-	if err := ensureDir(dir); err != nil {
+	if err := EnsureDir(dir); err != nil {
 		return nil, err
 	}
 	return listImages(dir, urlPrefix)
 }
 
-func (s *server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleFavicon(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

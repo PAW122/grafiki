@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"database/sql"
@@ -15,7 +15,7 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-func (s *server) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
@@ -45,7 +45,7 @@ func (s *server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
@@ -56,7 +56,7 @@ func (s *server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
@@ -93,7 +93,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if folder.Path != "" {
 		targetDir = filepath.Join(targetDir, folder.Path)
 	}
-	if err := ensureDir(targetDir); err != nil {
+	if err := EnsureDir(targetDir); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie przygotowac folderu")
 		return
 	}
@@ -163,7 +163,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
@@ -229,7 +229,7 @@ func (s *server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func (s *server) handleFolders(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleFolders(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		s.handleListFoldersAPI(w, r)
@@ -241,7 +241,7 @@ func (s *server) handleFolders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/folders/")
 	path = strings.Trim(path, "/")
 	if path == "" {
@@ -274,7 +274,7 @@ func (s *server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
 	if !s.sessions.authenticated(r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
@@ -295,7 +295,7 @@ func (s *server) handleCreateFolderAPI(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, view)
 }
 
-func (s *server) handleListFoldersAPI(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleListFoldersAPI(w http.ResponseWriter, r *http.Request) {
 	loggedIn := s.sessions.authenticated(r)
 	folders, err := s.listFolders(loggedIn)
 	if err != nil {
@@ -311,7 +311,7 @@ func (s *server) handleListFoldersAPI(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"folders": views})
 }
 
-func (s *server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+func (s *Server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
 	folder, err := s.getFolderByID(id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -329,7 +329,7 @@ func (s *server) handleGetFolderAPI(w http.ResponseWriter, r *http.Request, id i
 	writeJSON(w, http.StatusOK, folder.toView(requestBaseURL(r)))
 }
 
-func (s *server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+func (s *Server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
 	if !s.sessions.authenticated(r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
@@ -380,7 +380,7 @@ func (s *server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, i
 	writeJSON(w, http.StatusOK, folder.toView(requestBaseURL(r)))
 }
 
-func (s *server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+func (s *Server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
 	if !s.sessions.authenticated(r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
@@ -408,7 +408,7 @@ func (s *server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, i
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func (s *server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64) {
+func (s *Server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64) {
 	if !s.sessions.authenticated(r) {
 		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
 		return
@@ -453,7 +453,7 @@ func (s *server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64
 	}
 }
 
-func (s *server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

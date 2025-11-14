@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"crypto/rand"
@@ -8,20 +8,20 @@ import (
 	"time"
 )
 
-type sessionStore struct {
+type SessionStore struct {
 	mu     sync.RWMutex
 	tokens map[string]time.Time
 	ttl    time.Duration
 }
 
-func newSessionStore(ttl time.Duration) *sessionStore {
-	return &sessionStore{
+func NewSessionStore(ttl time.Duration) *SessionStore {
+	return &SessionStore{
 		tokens: make(map[string]time.Time),
 		ttl:    ttl,
 	}
 }
 
-func (s *sessionStore) start(w http.ResponseWriter) error {
+func (s *SessionStore) start(w http.ResponseWriter) error {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return err
@@ -46,7 +46,7 @@ func (s *sessionStore) start(w http.ResponseWriter) error {
 	return nil
 }
 
-func (s *sessionStore) authenticated(r *http.Request) bool {
+func (s *SessionStore) authenticated(r *http.Request) bool {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return false
@@ -66,7 +66,7 @@ func (s *sessionStore) authenticated(r *http.Request) bool {
 	return true
 }
 
-func (s *sessionStore) clear(w http.ResponseWriter, r *http.Request) {
+func (s *SessionStore) clear(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err == nil {
 		s.mu.Lock()

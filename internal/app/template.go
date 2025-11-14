@@ -1,6 +1,6 @@
-package main
+package app
 
-const pageTemplate = `<!DOCTYPE html>
+const PageTemplate = `<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8">

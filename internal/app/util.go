@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"net"
@@ -26,7 +26,7 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-func addressForLog(addr string) string {
+func AddressForLog(addr string) string {
 	if strings.HasPrefix(addr, ":") {
 		return "127.0.0.1" + addr
 	}

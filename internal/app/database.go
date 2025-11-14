@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"database/sql"
@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func openDatabase(path string) (*sql.DB, error) {
+func OpenDatabase(path string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}

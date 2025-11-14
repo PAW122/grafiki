@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-type requestLogger struct {
+type RequestLogger struct {
 	mu   sync.Mutex
 	file *os.File
 }
 
-func newRequestLogger(path string) (*requestLogger, error) {
+func NewRequestLogger(path string) (*RequestLogger, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
@@ -23,17 +23,17 @@ func newRequestLogger(path string) (*requestLogger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &requestLogger{file: f}, nil
+	return &RequestLogger{file: f}, nil
 }
 
-func (l *requestLogger) Close() error {
+func (l *RequestLogger) Close() error {
 	if l == nil || l.file == nil {
 		return nil
 	}
 	return l.file.Close()
 }
 
-func (l *requestLogger) Log(r *http.Request, action string) {
+func (l *RequestLogger) Log(r *http.Request, action string) {
 	if l == nil || l.file == nil {
 		return
 	}
