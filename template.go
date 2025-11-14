@@ -130,6 +130,37 @@ const pageTemplate = `<!DOCTYPE html>
       border-color: #2563eb;
       background: #e0ebff;
     }
+    .folder-card:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+    .folder-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+    }
+    .folder-card-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.4rem;
+    }
+    .folder-delete-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+    .folder-delete-btn:hover,
+    .folder-delete-btn:focus-visible {
+      background: rgba(239, 68, 68, 0.25);
+      color: #7f1d1d;
+    }
     .folder-name {
       font-weight: 600;
       font-size: 1rem;
@@ -600,17 +631,26 @@ const pageTemplate = `<!DOCTYPE html>
       {{if .Folders}}
       <div class="folders-grid">
         {{range .Folders}}
-        <button type="button" class="folder-card {{if and $.ActiveFolder (eq $.ActiveFolder.Slug .Slug)}}active{{end}}" data-slug="{{.Slug}}">
-          <div class="folder-name">{{.Name}}</div>
-          <div class="folder-meta">
-            <span class="badge {{.Visibility}}">
-              {{if eq .Visibility "public"}}Publiczny{{else if eq .Visibility "shared"}}Udostepniony{{else}}Prywatny{{end}}
-            </span>
-            {{if eq .Visibility "shared"}}
-            <span>{{.SharedViews}} wejsc</span>
-            {{end}}
+        <div class="folder-card {{if and $.ActiveFolder (eq $.ActiveFolder.Slug .Slug)}}active{{end}}" role="button" tabindex="0" data-slug="{{.Slug}}" data-folder-id="{{.ID}}" data-folder-name="{{.Name}}">
+          <div class="folder-card-body">
+            <div class="folder-name">{{.Name}}</div>
+            <div class="folder-meta">
+              <span class="badge {{.Visibility}}">
+                {{if eq .Visibility "public"}}Publiczny{{else if eq .Visibility "shared"}}Udostepniony{{else}}Prywatny{{end}}
+              </span>
+              {{if eq .Visibility "shared"}}
+              <span>{{.SharedViews}} wejsc</span>
+              {{end}}
+            </div>
           </div>
-        </button>
+          {{if $.AllowFolderManagement}}
+          <div class="folder-card-actions">
+            <button type="button" class="folder-delete-btn" data-folder-id="{{.ID}}" data-folder-name="{{.Name}}">
+              Usun folder
+            </button>
+          </div>
+          {{end}}
+        </div>
         {{end}}
       </div>
       {{else}}
@@ -1068,10 +1108,44 @@ const pageTemplate = `<!DOCTYPE html>
     });
 
     document.querySelectorAll('.folder-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const slug = card.dataset.slug;
-        if (!slug) return;
+      const slug = card.dataset.slug;
+      if (!slug) {
+        return;
+      }
+      const openFolder = () => {
         window.location.href = '/?folder=' + encodeURIComponent(slug);
+      };
+      card.addEventListener('click', () => {
+        openFolder();
+      });
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openFolder();
+        }
+      });
+    });
+
+    document.querySelectorAll('.folder-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const folderId = btn.dataset.folderId;
+        const folderName = btn.dataset.folderName || '';
+        if (!folderId) {
+          showMessage('Nie mozna usunac folderu', 'error');
+          return;
+        }
+        const confirmed = confirm('Czy na pewno chcesz usunac folder "' + (folderName || 'bez nazwy') + '" wraz ze wszystkimi grafikami oraz linkami?');
+        if (!confirmed) return;
+        try {
+          await fetchJSON('/api/folders/' + folderId, {
+            method: 'DELETE'
+          });
+          window.location.href = '/';
+        } catch (err) {
+          showMessage(err.message, 'error');
+        }
       });
     });
 

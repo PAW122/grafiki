@@ -266,8 +266,10 @@ func (s *server) handleFolderByID(w http.ResponseWriter, r *http.Request) {
 		s.handleGetFolderAPI(w, r, id)
 	case http.MethodPatch:
 		s.handleUpdateFolderAPI(w, r, id)
+	case http.MethodDelete:
+		s.handleDeleteFolderAPI(w, r, id)
 	default:
-		w.Header().Set("Allow", "GET, PATCH")
+		w.Header().Set("Allow", "GET, PATCH, DELETE")
 		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
 	}
 }
@@ -376,6 +378,34 @@ func (s *server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, i
 	}
 
 	writeJSON(w, http.StatusOK, folder.toView(requestBaseURL(r)))
+}
+
+func (s *server) handleDeleteFolderAPI(w http.ResponseWriter, r *http.Request, id int64) {
+	if !s.sessions.authenticated(r) {
+		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
+		return
+	}
+
+	if err := s.deleteFolder(id); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			writeJSONError(w, http.StatusNotFound, "Folder nie istnieje")
+		case errors.Is(err, errFolderProtected):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, errFolderPathInvalid):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		default:
+			log.Printf("delete folder: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie usunac folderu")
+		}
+		return
+	}
+
+	if s.logger != nil {
+		s.logger.Log(r, "usunfold")
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *server) handleFolderQR(w http.ResponseWriter, r *http.Request, id int64) {
