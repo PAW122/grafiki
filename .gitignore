@@ -2,5 +2,6 @@
 *.exe
 logs
 gallery.db
-logs
 config.json
+gallery.db-shm
+gallery.db-wal
