@@ -5,3 +5,4 @@ gallery.db
 config.json
 gallery.db-shm
 gallery.db-wal
+logs

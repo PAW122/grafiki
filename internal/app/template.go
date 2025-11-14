@@ -19,6 +19,69 @@ const PageTemplate = `<!DOCTYPE html>
       margin: 0;
       background: #f3f4f8;
       color: #1f2933;
+      min-height: 100vh;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+    .side-menu {
+      width: 230px;
+      background: #0f172a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: 2rem 1.25rem;
+    }
+    .side-menu-title {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    .side-menu-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .menu-link {
+      border: none;
+      border-radius: 12px;
+      padding: 0.65rem 0.9rem;
+      background: transparent;
+      color: #cbd5f5;
+      text-align: left;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+    .menu-link:hover,
+    .menu-link:focus-visible {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      outline: none;
+    }
+    .menu-link.active {
+      background: #2563eb;
+      color: #fff;
+    }
+    .page-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .view-section {
+      display: none;
+    }
+    body[data-page-view="gallery"] .view-gallery {
+      display: block;
+    }
+    body[data-page-view="submitted"] .view-submissions {
+      display: block;
     }
     .topbar {
       display: flex;
@@ -66,6 +129,27 @@ const PageTemplate = `<!DOCTYPE html>
       color: #fff;
       box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
     }
+    .btn-tertiary {
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.2);
+    }
+    .btn-tertiary:hover {
+      background: rgba(37, 99, 235, 0.24);
+      color: #1e3a8a;
+    }
+    .inline-form {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .inline-form input[type="text"] {
+      border: 1px solid rgba(15, 23, 42, 0.15);
+      border-radius: 999px;
+      padding: 0.5rem 1.1rem;
+      min-width: 200px;
+    }
     .btn:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
@@ -110,6 +194,46 @@ const PageTemplate = `<!DOCTYPE html>
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
+    }
+    .submissions-panel {
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    .submissions-grid {
+      margin-top: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .submission-card {
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 18px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      background: #fff;
+      transition: border 0.18s ease, box-shadow 0.18s ease;
+    }
+    .submission-card.active {
+      border-color: #2563eb;
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.15);
+    }
+    .submission-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .submission-meta {
+      display: flex;
+      gap: 0.65rem;
+      font-size: 0.85rem;
+      color: #475569;
+      flex-wrap: wrap;
+    }
+    .submission-card-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
     }
     .folder-card {
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -272,6 +396,77 @@ const PageTemplate = `<!DOCTYPE html>
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 1.25rem;
+    }
+    .submission-list {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .submission-entry {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 20px;
+      flex-wrap: wrap;
+    }
+    .submission-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #475569;
+      flex-shrink: 0;
+    }
+    .submission-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .pdf-preview,
+    .file-preview {
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+    }
+    .submission-info {
+      flex: 1;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .submission-info h3 {
+      margin: 0;
+      font-size: 1rem;
+      color: #0f172a;
+    }
+    .submission-info p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: #475569;
+    }
+    .submission-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .submissions-settings {
+      margin: 1.25rem 0;
+      padding: 1rem 1.25rem;
+      background: #f1f5f9;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
     .tile {
       display: flex;
@@ -593,6 +788,21 @@ const PageTemplate = `<!DOCTYPE html>
       background: #dc2626;
       box-shadow: 0 15px 40px rgba(220, 38, 38, 0.35);
     }
+    @media (max-width: 960px) {
+      .app-wrapper {
+        flex-direction: column;
+      }
+      .side-menu {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+      }
+      .side-menu-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+    }
     @media (max-width: 720px) {
       .section-header {
         flex-direction: column;
@@ -620,7 +830,18 @@ const PageTemplate = `<!DOCTYPE html>
     }
   </style>
 </head>
-<body data-shared-mode="{{if .SharedMode}}true{{else}}false{{end}}" data-active-folder="{{if .ActiveFolder}}{{.ActiveFolder.Slug}}{{end}}" data-active-folder-id="{{if .ActiveFolder}}{{.ActiveFolder.ID}}{{end}}" data-active-folder-visibility="{{if .ActiveFolder}}{{.ActiveFolder.Visibility}}{{end}}" data-active-folder-share-token="{{if .ActiveFolder}}{{.ActiveFolder.SharedToken}}{{end}}" data-active-folder-share-url="{{if .ActiveFolder}}{{.ActiveFolder.ShareURL}}{{end}}" data-active-folder-share-views="{{if .ActiveFolder}}{{.ActiveFolder.SharedViews}}{{end}}" data-active-folder-name="{{if .ActiveFolder}}{{.ActiveFolder.Name}}{{end}}">
+<body data-page-view="{{.View}}" data-logged-in="{{if .LoggedIn}}true{{else}}false{{end}}" data-upload-limit="{{.SubmissionUploadLimit}}" data-shared-mode="{{if .SharedMode}}true{{else}}false{{end}}" data-sub-shared-mode="{{if .SubmissionSharedMode}}true{{else}}false{{end}}" data-active-folder="{{if .ActiveFolder}}{{.ActiveFolder.Slug}}{{end}}" data-active-folder-id="{{if .ActiveFolder}}{{.ActiveFolder.ID}}{{end}}" data-active-folder-visibility="{{if .ActiveFolder}}{{.ActiveFolder.Visibility}}{{end}}" data-active-folder-share-token="{{if .ActiveFolder}}{{.ActiveFolder.SharedToken}}{{end}}" data-active-folder-share-url="{{if .ActiveFolder}}{{.ActiveFolder.ShareURL}}{{end}}" data-active-folder-share-views="{{if .ActiveFolder}}{{.ActiveFolder.SharedViews}}{{end}}" data-active-folder-name="{{if .ActiveFolder}}{{.ActiveFolder.Name}}{{end}}" data-sub-active-group="{{if .ActiveSubmissionGroup}}{{.ActiveSubmissionGroup.Slug}}{{end}}" data-sub-active-group-id="{{if .ActiveSubmissionGroup}}{{.ActiveSubmissionGroup.ID}}{{end}}" data-sub-active-group-visibility="{{if .ActiveSubmissionGroup}}{{.ActiveSubmissionGroup.Visibility}}{{end}}" data-sub-active-group-share-token="{{if .ActiveSubmissionGroup}}{{.ActiveSubmissionGroup.SharedToken}}{{end}}" data-sub-active-group-share-url="{{if .ActiveSubmissionGroup}}{{.ActiveSubmissionGroup.ShareURL}}{{end}}">
+  <div class="app-wrapper">
+    {{if .LoggedIn}}
+    <aside class="side-menu">
+      <div class="side-menu-title">Menu</div>
+      <nav class="side-menu-links">
+        <button type="button" class="menu-link {{if ne .View "submitted"}}active{{end}}" data-view-target="gallery">Galeria</button>
+        <button type="button" class="menu-link {{if eq .View "submitted"}}active{{end}}" data-view-target="submitted">Przeslane</button>
+      </nav>
+    </aside>
+    {{end}}
+    <div class="page-wrapper">
   <header class="topbar">
     <div class="brand">Galeria zdjec</div>
     <div class="top-actions">
@@ -636,6 +857,7 @@ const PageTemplate = `<!DOCTYPE html>
     </div>
   </header>
   <main class="page">
+    <section class="view-section view-gallery">
     {{if not .SharedMode}}
     <section class="section-card folders-panel">
       <div class="section-header">
@@ -747,6 +969,178 @@ const PageTemplate = `<!DOCTYPE html>
       </div>
       {{end}}
     </section>
+    </section>
+
+    <section class="view-section view-submissions" id="submittedView">
+      {{if or .AllowSubmissionManagement .SubmissionGroups}}
+      <div class="section-card submissions-panel">
+        <div class="section-header">
+          <div>
+            <h2>Przeslane pliki</h2>
+            <p>Zarzadzaj grupami i przegladaj przeslane materialy.</p>
+          </div>
+          {{if .AllowSubmissionManagement}}
+          <form id="newSubmissionGroupForm" class="inline-form">
+            <input type="text" name="name" placeholder="Nowa grupa" required>
+            <button class="btn btn-secondary" type="submit">Dodaj</button>
+          </form>
+          {{end}}
+        </div>
+        {{if .SubmissionGroups}}
+        <div class="submissions-grid">
+          {{range .SubmissionGroups}}
+          <div class="submission-card {{if and $.ActiveSubmissionGroup (eq $.ActiveSubmissionGroup.ID .ID)}}active{{end}}">
+            <div>
+              <div class="submission-name">{{.Name}}</div>
+              <div class="submission-meta">
+                <span class="badge {{.Visibility}}">
+                  {{if eq .Visibility "public"}}Publiczna{{else if eq .Visibility "shared"}}Udostepniony link{{else}}Prywatna{{end}}
+                </span>
+                {{if .SharedViews}}
+                <span>{{.SharedViews}} wejsc</span>
+                {{end}}
+              </div>
+            </div>
+            <div class="submission-card-actions">
+              <a class="btn btn-tertiary" href="/?view=submitted&group={{.Slug}}">Otworz</a>
+              {{if $.AllowSubmissionManagement}}
+              <button type="button" class="ghost submission-delete-btn" data-group-id="{{.ID}}" data-group-name="{{.Name}}">Usun</button>
+              {{end}}
+            </div>
+          </div>
+          {{end}}
+        </div>
+        {{else}}
+        <p class="empty-state">Brak grup przeslan.</p>
+        {{end}}
+      </div>
+      {{end}}
+
+      <div class="section-card submissions-workspace {{if not .ActiveSubmissionGroup}}workspace-empty{{end}}" id="submissionsWorkspace">
+        {{if .ActiveSubmissionGroup}}
+        <div class="workspace-header">
+          <div>
+            <h2>{{.ActiveSubmissionGroup.Name}}</h2>
+            <p class="workspace-subtitle">
+              {{if eq .ActiveSubmissionGroup.Visibility "public"}}Grupa publiczna. Wszystkie pliki sa widoczne dla wszystkich.{{else if eq .ActiveSubmissionGroup.Visibility "shared"}}Grupa dostepna z tajnym linkiem. Odwiedzajacy widza jedynie swoje pliki.{{else}}Grupa prywatna. Dostepna tylko po zalogowaniu.{{end}}
+            </p>
+          </div>
+          <div class="workspace-actions">
+            <span class="badge {{.ActiveSubmissionGroup.Visibility}}">
+              {{if eq .ActiveSubmissionGroup.Visibility "public"}}Publiczna{{else if eq .ActiveSubmissionGroup.Visibility "shared"}}Udostepniony link{{else}}Prywatna{{end}}
+            </span>
+            {{if .SubmissionSharedMode}}
+            <span class="badge shared">Udostepniony link</span>
+            {{end}}
+          </div>
+        </div>
+
+        <div class="share-details" id="submissionShareDetails" {{if not .SubmissionShareLink}}hidden{{end}}>
+          <strong>Link udostepniony</strong>
+          <div class="share-link-row">
+            <code id="submissionShareLinkValue" data-link="{{.SubmissionShareLink}}">{{if .SubmissionShareLink}}{{.SubmissionShareLink}}{{else}}Brak linku{{end}}</code>
+            {{if .SubmissionShareLink}}
+            <button type="button" class="ghost" id="submissionCopyLink">Kopiuj</button>
+            {{end}}
+            {{if .AllowSubmissionManagement}}
+            <button type="button" class="ghost" id="submissionRegenerateLink">Nowy link</button>
+            {{end}}
+          </div>
+        </div>
+
+        {{if .AllowSubmissionManagement}}
+        <form id="submissionGroupSettingsForm" class="submissions-settings">
+          <label>
+            Nazwa grupy
+            <input type="text" name="groupName" value="{{.ActiveSubmissionGroup.Name}}" required>
+          </label>
+          <span class="section-label">Widocznosc</span>
+          <div class="visibility-options">
+            <label class="radio-option">
+              <input type="radio" name="submissionVisibility" value="public" {{if eq .ActiveSubmissionGroup.Visibility "public"}}checked{{end}}>
+              <span class="radio-description">
+                <strong>Publiczna</strong>
+                <span>Dostepna dla wszystkich odwiedzajacych.</span>
+              </span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="submissionVisibility" value="shared" {{if eq .ActiveSubmissionGroup.Visibility "shared"}}checked{{end}}>
+              <span class="radio-description">
+                <strong>Udostepniony link</strong>
+                <span>Wejscie tylko przez sekret link.</span>
+              </span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="submissionVisibility" value="private" {{if eq .ActiveSubmissionGroup.Visibility "private"}}checked{{end}}>
+              <span class="radio-description">
+                <strong>Prywatna</strong>
+                <span>Tylko administrator ma dostep.</span>
+              </span>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button class="primary" type="submit">Zapisz</button>
+          </div>
+        </form>
+        {{end}}
+
+        {{if .SubmissionSharedMode}}
+        <div class="info-panel">Ten widok pokazuje jedynie pliki przeslane z tego urzadzenia. Aby zobaczyc inne, uzyj wlasnego linku.</div>
+        {{end}}
+
+        {{if .AllowSubmissionUpload}}
+        <form id="submissionUploadForm" class="upload-panel">
+          <input type="hidden" name="group" value="{{.ActiveSubmissionGroup.Slug}}">
+          {{if .SubmissionSharedMode}}
+          <input type="hidden" name="token" value="{{.ActiveSubmissionGroup.SharedToken}}">
+          {{end}}
+          <label>
+            Twoja nazwa
+            <input type="text" name="name" placeholder="np. Jan Kowalski" required>
+          </label>
+          <label>
+            Plik
+            <input type="file" name="file" required accept=".jpg,.jpeg,.png,.gif,.bmp,.svg,.webp,.avif,.pdf">
+          </label>
+          <small>Maksymalny rozmiar {{.SubmissionUploadLimit}} MB. Dozwolone obrazy i PDF.</small>
+          <button class="submit-btn" type="submit">Przeslij</button>
+        </form>
+        {{else}}
+        <div class="info-panel">Wysylanie plikow jest wylaczone dla tej grupy.</div>
+        {{end}}
+
+        {{if .SubmissionEntries}}
+        <div class="submission-list">
+          {{range .SubmissionEntries}}
+          <article class="submission-entry">
+            <div class="submission-preview">
+              {{if .IsImage}}
+              <img src="{{.URL}}" alt="{{.Original}}">
+              {{else if .IsPDF}}
+              <div class="pdf-preview">PDF</div>
+              {{else}}
+              <div class="file-preview">Plik</div>
+              {{end}}
+            </div>
+            <div class="submission-info">
+              <h3>{{.Original}}</h3>
+              <p>Dodane przez <strong>{{.UploadedBy}}</strong> • {{.UploadedAt}} • {{.SizeLabel}}</p>
+              <div class="submission-actions">
+                <a class="btn btn-secondary" href="{{.URL}}" target="_blank" rel="noopener">Podglad</a>
+                <a class="btn btn-tertiary" href="{{.DownloadURL}}">Pobierz</a>
+              </div>
+            </div>
+          </article>
+          {{end}}
+        </div>
+        {{else}}
+        <p class="empty">Brak plikow w tej grupie.</p>
+        {{end}}
+        {{else}}
+        <p class="empty-state large">Wybierz grupe, aby zobaczyc przeslane pliki.</p>
+        {{end}}
+      </div>
+    </section>
   </main>
   <div class="fullscreen-backdrop" id="backdrop" role="dialog" aria-modal="true">
     <div class="fullscreen-content">
@@ -851,11 +1245,15 @@ const PageTemplate = `<!DOCTYPE html>
   </div>
 
   <div class="toast" id="statusMessage" role="status" aria-live="polite"></div>
+    </div>
+  </div>
 
   <script>
     const state = (() => {
       const dataset = document.body?.dataset || {};
       return {
+        pageView: dataset.pageView || 'gallery',
+        loggedIn: dataset.loggedIn === 'true',
         sharedMode: dataset.sharedMode === 'true',
         activeFolder: dataset.activeFolder || '',
         activeFolderId: Number(dataset.activeFolderId || 0),
@@ -863,7 +1261,14 @@ const PageTemplate = `<!DOCTYPE html>
         activeFolderShareToken: dataset.activeFolderShareToken || '',
         activeFolderShareUrl: dataset.activeFolderShareUrl || '',
         activeFolderShareViews: Number(dataset.activeFolderShareViews || 0),
-        activeFolderName: dataset.activeFolderName || ''
+        activeFolderName: dataset.activeFolderName || '',
+        submissionSharedMode: dataset.subSharedMode === 'true',
+        activeSubmissionGroup: dataset.subActiveGroup || '',
+        activeSubmissionGroupId: Number(dataset.subActiveGroupId || 0),
+        activeSubmissionGroupVisibility: dataset.subActiveGroupVisibility || '',
+        activeSubmissionShareToken: dataset.subActiveGroupShareToken || '',
+        activeSubmissionShareUrl: dataset.subActiveGroupShareUrl || '',
+        uploadLimit: Number(dataset.uploadLimit || 0)
       };
     })();
 
@@ -896,6 +1301,13 @@ const PageTemplate = `<!DOCTYPE html>
     const copyShareLink = document.getElementById('copyShareLink');
     const regenerateLinkButton = document.getElementById('regenerateLinkButton');
     const downloadQrButton = document.getElementById('downloadQrButton');
+    const viewSwitchButtons = document.querySelectorAll('[data-view-target]');
+    const newSubmissionGroupForm = document.getElementById('newSubmissionGroupForm');
+    const submissionGroupSettingsForm = document.getElementById('submissionGroupSettingsForm');
+    const submissionUploadForm = document.getElementById('submissionUploadForm');
+    const submissionDeleteButtons = document.querySelectorAll('.submission-delete-btn');
+    const submissionCopyLinkButton = document.getElementById('submissionCopyLink');
+    const submissionRegenerateLinkButton = document.getElementById('submissionRegenerateLink');
     let hideToast;
 
     const zoomState = {
@@ -920,6 +1332,110 @@ const PageTemplate = `<!DOCTYPE html>
         messageEl.classList.remove('visible');
       }, 4000);
     }
+
+    submissionDeleteButtons.forEach(btn => {
+      btn.addEventListener('click', async event => {
+        event.preventDefault();
+        if (!confirm('Czy na pewno usunac te grupe wraz z przeslanymi plikami?')) {
+          return;
+        }
+        const id = btn.dataset.groupId;
+        if (!id) {
+          showMessage('Brak identyfikatora grupy', 'error');
+          return;
+        }
+        try {
+          await fetchJSON('/api/submissions/groups/' + id, { method: 'DELETE' });
+          window.location.reload();
+        } catch (err) {
+          showMessage(err.message, 'error');
+        }
+      });
+    });
+
+    submissionGroupSettingsForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!state.activeSubmissionGroupId) {
+        showMessage('Brak wybranej grupy', 'error');
+        return;
+      }
+      const formData = new FormData(submissionGroupSettingsForm);
+      const name = String(formData.get('groupName') || '').trim();
+      if (!name) {
+        showMessage('Nazwa grupy jest wymagana', 'error');
+        return;
+      }
+      const visibility = formData.get('submissionVisibility');
+      try {
+        const updated = await fetchJSON('/api/submissions/groups/' + state.activeSubmissionGroupId, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name, visibility})
+        });
+        const slug = updated.slug || updated.Slug;
+        const next = new URL(window.location.href);
+        next.searchParams.set('view', 'submitted');
+        if (slug) {
+          next.searchParams.set('group', slug);
+        }
+        window.location.href = next.toString();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+
+    submissionRegenerateLinkButton?.addEventListener('click', async () => {
+      if (!state.activeSubmissionGroupId) {
+        return;
+      }
+      try {
+        await fetchJSON('/api/submissions/groups/' + state.activeSubmissionGroupId, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({regenerateLink: true})
+        });
+        window.location.reload();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
+
+    submissionCopyLinkButton?.addEventListener('click', async () => {
+      const link = document.getElementById('submissionShareLinkValue')?.dataset.link;
+      if (!link) {
+        showMessage('Brak linku do skopiowania', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(link);
+        showMessage('Skopiowano link');
+      } catch (_) {
+        showMessage('Nie udalo sie skopiowac linku', 'error');
+      }
+    });
+
+    submissionUploadForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const formData = new FormData(submissionUploadForm);
+      const name = String(formData.get('name') || '').trim();
+      if (!name) {
+        showMessage('Podpisz sie przed wysylka', 'error');
+        return;
+      }
+      if (!formData.get('file')) {
+        showMessage('Wybierz plik do przeslania', 'error');
+        return;
+      }
+      try {
+        await fetchJSON('/api/submissions/upload', {
+          method: 'POST',
+          body: formData
+        });
+        window.location.reload();
+      } catch (err) {
+        showMessage(err.message, 'error');
+      }
+    });
 
     function openModal(modal) {
       modal?.classList.add('active');
@@ -1137,6 +1653,24 @@ const PageTemplate = `<!DOCTYPE html>
       }
     });
 
+    viewSwitchButtons.forEach(btn => {
+      btn.addEventListener('click', event => {
+        event.preventDefault();
+        const target = btn.dataset.viewTarget;
+        const url = new URL(window.location.href);
+        if (target === 'gallery') {
+          url.searchParams.delete('view');
+          url.searchParams.delete('group');
+        } else if (target === 'submitted') {
+          url.searchParams.set('view', 'submitted');
+          if (state.activeSubmissionGroup) {
+            url.searchParams.set('group', state.activeSubmissionGroup);
+          }
+        }
+        window.location.href = url.toString();
+      });
+    });
+
     document.querySelectorAll('.folder-card').forEach(card => {
       const slug = card.dataset.slug;
       if (!slug) {
@@ -1319,6 +1853,34 @@ const PageTemplate = `<!DOCTYPE html>
           closeModal(newFolderModal);
           const slug = folder.slug || folder.Slug;
           window.location.href = slug ? '/?folder=' + encodeURIComponent(slug) : window.location.href;
+        } catch (err) {
+          showMessage(err.message, 'error');
+        }
+      });
+    }
+
+    if (newSubmissionGroupForm) {
+      newSubmissionGroupForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const formData = new FormData(newSubmissionGroupForm);
+        const name = String(formData.get('name') || '').trim();
+        if (!name) {
+          showMessage('Podaj nazwe grupy', 'error');
+          return;
+        }
+        try {
+          const group = await fetchJSON('/api/submissions/groups', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name})
+          });
+          const slug = group.slug || group.Slug;
+          const next = new URL(window.location.href);
+          next.searchParams.set('view', 'submitted');
+          if (slug) {
+            next.searchParams.set('group', slug);
+          }
+          window.location.href = next.toString();
         } catch (err) {
           showMessage(err.message, 'error');
         }

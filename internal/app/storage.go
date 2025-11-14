@@ -57,6 +57,18 @@ func isImageFile(name string) bool {
 	}
 }
 
+func isSubmissionFile(name string) bool {
+	if isImageFile(name) {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".pdf":
+		return true
+	default:
+		return false
+	}
+}
+
 func uniqueFilename(dir, name string) (string, error) {
 	base := strings.TrimSuffix(name, filepath.Ext(name))
 	ext := filepath.Ext(name)

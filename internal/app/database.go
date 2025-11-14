@@ -55,6 +55,36 @@ func migrateDatabase(db *sql.DB) error {
 	INSERT INTO folders (name, slug, path, visibility)
 	SELECT 'Domyslny', 'domyslny', '', 'public'
 	WHERE NOT EXISTS (SELECT 1 FROM folders WHERE path = '');
+
+	CREATE TABLE IF NOT EXISTS submission_groups (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		slug TEXT NOT NULL UNIQUE,
+		path TEXT NOT NULL UNIQUE,
+		visibility TEXT NOT NULL DEFAULT 'private',
+		shared_token TEXT UNIQUE,
+		shared_views INTEGER NOT NULL DEFAULT 0,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_submission_groups_slug ON submission_groups(slug);
+	CREATE INDEX IF NOT EXISTS idx_submission_groups_visibility ON submission_groups(visibility);
+
+	CREATE TABLE IF NOT EXISTS submissions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		group_id INTEGER NOT NULL REFERENCES submission_groups(id) ON DELETE CASCADE,
+		uploader_name TEXT NOT NULL,
+		contributor_token TEXT NOT NULL,
+		filename TEXT NOT NULL,
+		original_name TEXT NOT NULL,
+		mime_type TEXT,
+		size_bytes INTEGER NOT NULL,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_submissions_group ON submissions(group_id);
+	CREATE INDEX IF NOT EXISTS idx_submissions_created ON submissions(created_at DESC);
 	`
 
 	_, err := db.Exec(schema)

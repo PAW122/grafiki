@@ -69,7 +69,7 @@ func main() {
 	}
 
 	tmpl := template.Must(template.New("gallery").Parse(app.PageTemplate))
-	srv := app.NewServer(app.ServerOptions{
+	srv, err := app.NewServer(app.ServerOptions{
 		Dir:      dir,
 		Config:   cfg,
 		Template: tmpl,
@@ -78,6 +78,9 @@ func main() {
 		DB:       db,
 		Favicon:  faviconPath,
 	})
+	if err != nil {
+		log.Fatalf("init server: %v", err)
+	}
 
 	mux := http.NewServeMux()
 	srv.RegisterRoutes(mux)

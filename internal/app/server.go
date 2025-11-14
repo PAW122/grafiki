@@ -27,35 +27,50 @@ type imageInfo struct {
 }
 
 type pageData struct {
-	Images                []imageInfo
-	LoggedIn              bool
-	Folders               []folderView
-	ActiveFolder          *folderView
-	SharedMode            bool
-	AllowFolderManagement bool
-	BaseURL               string
+	Images                    []imageInfo
+	LoggedIn                  bool
+	Folders                   []folderView
+	ActiveFolder              *folderView
+	SharedMode                bool
+	AllowFolderManagement     bool
+	BaseURL                   string
+	View                      string
+	SubmissionGroups          []submissionGroupView
+	ActiveSubmissionGroup     *submissionGroupView
+	SubmissionEntries         []submissionEntryView
+	SubmissionSharedMode      bool
+	AllowSubmissionManagement bool
+	AllowSubmissionUpload     bool
+	SubmissionShareLink       string
+	SubmissionUploadLimit     int
 }
 
 type Server struct {
-	dir      string
-	cfg      Config
-	tmpl     *template.Template
-	sessions *SessionStore
-	logger   *RequestLogger
-	db       *sql.DB
-	favicon  string
+	dir            string
+	submissionsDir string
+	cfg            Config
+	tmpl           *template.Template
+	sessions       *SessionStore
+	logger         *RequestLogger
+	db             *sql.DB
+	favicon        string
 }
 
-func NewServer(opts ServerOptions) *Server {
-	return &Server{
-		dir:      opts.Dir,
-		cfg:      opts.Config,
-		tmpl:     opts.Template,
-		sessions: opts.Sessions,
-		logger:   opts.Logger,
-		db:       opts.DB,
-		favicon:  opts.Favicon,
+func NewServer(opts ServerOptions) (*Server, error) {
+	submissionsDir := filepath.Join(opts.Dir, "_submitted")
+	if err := EnsureDir(submissionsDir); err != nil {
+		return nil, err
 	}
+	return &Server{
+		dir:            opts.Dir,
+		submissionsDir: submissionsDir,
+		cfg:            opts.Config,
+		tmpl:           opts.Template,
+		sessions:       opts.Sessions,
+		logger:         opts.Logger,
+		db:             opts.DB,
+		favicon:        opts.Favicon,
+	}, nil
 }
 
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
@@ -68,7 +83,12 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/images/rename", s.handleRenameImage)
 	mux.HandleFunc("/api/folders", s.handleFolders)
 	mux.HandleFunc("/api/folders/", s.handleFolderByID)
+	mux.HandleFunc("/api/submissions/upload", s.handleSubmissionUpload)
+	mux.HandleFunc("/api/submissions/groups", s.handleSubmissionGroups)
+	mux.HandleFunc("/api/submissions/groups/", s.handleSubmissionGroupByID)
 	mux.HandleFunc("/shared/", s.handleSharedFolder)
+	mux.HandleFunc("/submitted/", s.handleSubmittedRoutes)
+	mux.HandleFunc("/submitted/file/", s.handleSubmissionFile)
 	mux.HandleFunc("/favicon.ico", s.handleFavicon)
 }
 
@@ -80,6 +100,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pathSlug := strings.Trim(r.URL.Path, "/")
+	viewParam := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("view")))
+	if pathSlug == "" && viewParam == "submitted" {
+		if !s.sessions.authenticated(r) {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+		s.renderSubmittedDashboard(w, r)
+		return
+	}
+
 	var rawSlug string
 	if pathSlug != "" {
 		if strings.Contains(pathSlug, "/") {
@@ -156,8 +186,95 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ActiveFolder:          activeFolder,
 		BaseURL:               baseURL,
 		AllowFolderManagement: loggedIn,
+		View:                  "gallery",
+		SubmissionUploadLimit: int(submissionUploadMaxSize >> 20),
 	}
 
+	s.renderPage(w, data)
+}
+
+func (s *Server) renderSubmittedDashboard(w http.ResponseWriter, r *http.Request) {
+	loggedIn := s.sessions.authenticated(r)
+	if !loggedIn {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	viewerToken := s.ensureSubmissionViewerToken(w, r)
+	baseURL := requestBaseURL(r)
+
+	groups, err := s.listSubmissionGroups(loggedIn)
+	if err != nil {
+		log.Printf("list submission groups: %v", err)
+		http.Error(w, "failed to load groups", http.StatusInternalServerError)
+		return
+	}
+
+	groupSlug := strings.TrimSpace(r.URL.Query().Get("group"))
+	var activeRecord *submissionGroupRecord
+	groupViews := make([]submissionGroupView, 0, len(groups))
+	for i := range groups {
+		rec := groups[i]
+		if activeRecord == nil {
+			if groupSlug == "" && i == 0 {
+				activeRecord = &groups[i]
+			} else if groupSlug != "" && rec.Slug == sanitizeFilename(groupSlug) {
+				activeRecord = &groups[i]
+			}
+		}
+		groupViews = append(groupViews, rec.toView(baseURL))
+	}
+
+	var activeView *submissionGroupView
+	var entries []submissionEntryView
+	shareLink := ""
+	allowUpload := false
+
+	if activeRecord != nil {
+		if activeRecord.Visibility == visibilityShared {
+			if _, err := s.ensureSubmissionSharedToken(activeRecord.ID); err == nil {
+				if refreshed, err := s.getSubmissionGroupByID(activeRecord.ID); err == nil {
+					activeRecord = refreshed
+				}
+			}
+		}
+		view := activeRecord.toView(baseURL)
+		activeView = &view
+		shareLink = view.ShareURL
+		allowUpload = loggedIn || activeRecord.Visibility != visibilityPrivate
+		entries, err = s.submissionEntriesForGroup(activeRecord, viewerToken, loggedIn)
+		if err != nil {
+			log.Printf("list submissions: %v", err)
+			http.Error(w, "failed to load submissions", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	data := pageData{
+		LoggedIn:                  loggedIn,
+		View:                      "submitted",
+		BaseURL:                   baseURL,
+		SubmissionGroups:          groupViews,
+		ActiveSubmissionGroup:     activeView,
+		SubmissionEntries:         entries,
+		SubmissionSharedMode:      false,
+		AllowSubmissionManagement: loggedIn,
+		AllowSubmissionUpload:     allowUpload,
+		SubmissionShareLink:       shareLink,
+		SubmissionUploadLimit:     int(submissionUploadMaxSize >> 20),
+		AllowFolderManagement:     loggedIn,
+	}
+
+	s.renderPage(w, data)
+}
+
+func (s *Server) renderPage(w http.ResponseWriter, data pageData) {
+	if data.View == "" {
+		data.View = "gallery"
+	}
+	if data.SubmissionUploadLimit == 0 {
+		data.SubmissionUploadLimit = int(submissionUploadMaxSize >> 20)
+	}
 	if err := s.tmpl.Execute(w, data); err != nil {
 		log.Printf("template execute: %v", err)
 	}
