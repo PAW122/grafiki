@@ -77,8 +77,20 @@ const PageTemplate = `<!DOCTYPE html>
     .view-section {
       display: none;
     }
+    .view-gallery {
+      display: block;
+    }
+    .view-submissions {
+      display: none;
+    }
     body[data-page-view="gallery"] .view-gallery {
       display: block;
+    }
+    body[data-page-view="gallery"] .view-submissions {
+      display: none;
+    }
+    body[data-page-view="submitted"] .view-gallery {
+      display: none;
     }
     body[data-page-view="submitted"] .view-submissions {
       display: block;
@@ -158,8 +170,9 @@ const PageTemplate = `<!DOCTYPE html>
       display: none;
     }
     .page {
-      padding: 2rem clamp(1rem, 4vw, 3rem);
+      width: 100%;
       max-width: 1280px;
+      padding: 2rem clamp(1rem, 4vw, 3rem);
       margin: 0 auto 3rem;
       display: flex;
       flex-direction: column;

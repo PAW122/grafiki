@@ -645,6 +645,7 @@ func (s *Server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := pageData{
+		View:                  "gallery",
 		Images:                images,
 		LoggedIn:              s.sessions.authenticated(r),
 		Folders:               nil,
@@ -658,7 +659,5 @@ func (s *Server) handleSharedFolder(w http.ResponseWriter, r *http.Request) {
 		s.logger.Log(r, "folderlink")
 	}
 
-	if err := s.tmpl.Execute(w, data); err != nil {
-		log.Printf("template execute: %v", err)
-	}
+	s.renderPage(w, data)
 }
