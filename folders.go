@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -22,11 +21,6 @@ var allowedVisibilities = map[string]struct{}{
 	visibilityShared:  {},
 	visibilityPrivate: {},
 }
-
-var (
-	errFolderProtected   = errors.New("nie mozna usunac folderu glownego")
-	errFolderPathInvalid = errors.New("nieprawidlowy katalog folderu")
-)
 
 type folderRecord struct {
 	ID          int64
@@ -252,29 +246,4 @@ func folderURLPrefix(path string) string {
 		return ""
 	}
 	return strings.Trim(strings.ReplaceAll(filepath.ToSlash(path), "//", "/"), "/")
-}
-
-func (s *server) deleteFolder(id int64) error {
-	folder, err := s.getFolderByID(id)
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(folder.Path) == "" {
-		return errFolderProtected
-	}
-
-	baseDir := filepath.Clean(s.dir)
-	targetDir := filepath.Join(baseDir, folder.Path)
-	cleanTarget := filepath.Clean(targetDir)
-
-	if cleanTarget == baseDir || !strings.HasPrefix(cleanTarget, baseDir+string(os.PathSeparator)) {
-		return errFolderPathInvalid
-	}
-
-	if err := os.RemoveAll(cleanTarget); err != nil {
-		return err
-	}
-
-	_, err = s.db.Exec(`DELETE FROM folders WHERE id = ?`, id)
-	return err
 }
