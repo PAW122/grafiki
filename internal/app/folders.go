@@ -24,8 +24,10 @@ var allowedVisibilities = map[string]struct{}{
 }
 
 var (
-	errFolderProtected   = errors.New("nie mozna usunac folderu glownego")
-	errFolderPathInvalid = errors.New("nieprawidlowy katalog folderu")
+	errFolderProtected    = errors.New("nie mozna usunac folderu glownego")
+	errFolderPathInvalid  = errors.New("nieprawidlowy katalog folderu")
+	errFolderNameExists   = errors.New("folder o takiej nazwie juz istnieje")
+	errFolderRenameFailed = errors.New("Nie udalo sie zmienic nazwy folderu")
 )
 
 type folderRecord struct {
@@ -66,13 +68,20 @@ func (f folderRecord) toView(baseURL string) folderView {
 }
 
 func (s *Server) folderSlugExists(slug string) (bool, error) {
-	var exists int
-	err := s.db.QueryRow(`SELECT 1 FROM folders WHERE slug = ? LIMIT 1`, slug).Scan(&exists)
+	return s.folderSlugTaken(slug, 0)
+}
+
+func (s *Server) folderSlugTaken(slug string, excludeID int64) (bool, error) {
+	var existingID int64
+	err := s.db.QueryRow(`SELECT id FROM folders WHERE slug = ? LIMIT 1`, slug).Scan(&existingID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
+	}
+	if excludeID != 0 && existingID == excludeID {
+		return false, nil
 	}
 	return true, nil
 }
@@ -252,6 +261,83 @@ func folderURLPrefix(path string) string {
 		return ""
 	}
 	return strings.Trim(strings.ReplaceAll(filepath.ToSlash(path), "//", "/"), "/")
+}
+
+func (s *Server) renameFolder(id int64, name string) (*folderRecord, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("nazwa folderu jest wymagana")
+	}
+
+	folder, err := s.getFolderByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(folder.Path) == "" {
+		return nil, errFolderProtected
+	}
+
+	baseSlug := sanitizeFilename(name)
+	if baseSlug == "" {
+		baseSlug = sanitizeFilename(strings.ReplaceAll(strings.ToLower(name), " ", "-"))
+	}
+	if baseSlug == "" {
+		return nil, errors.New("nie udalo sie wygenerowac nazwy folderu")
+	}
+
+	slug := baseSlug
+	for i := 2; ; i++ {
+		taken, lookupErr := s.folderSlugTaken(slug, id)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if !taken {
+			break
+		}
+		slug = fmt.Sprintf("%s-%d", baseSlug, i)
+	}
+
+	slugChanged := slug != folder.Slug
+	nameChanged := name != folder.Name
+	if !slugChanged && !nameChanged {
+		return folder, nil
+	}
+
+	newRelPath := folder.Path
+	baseDir := filepath.Clean(s.dir)
+	oldPath := filepath.Join(baseDir, folder.Path)
+	newPath := filepath.Join(baseDir, slug)
+
+	if slugChanged {
+		if oldPath == baseDir || !strings.HasPrefix(oldPath, baseDir+string(os.PathSeparator)) {
+			return nil, errFolderPathInvalid
+		}
+		if !strings.HasPrefix(newPath, baseDir+string(os.PathSeparator)) {
+			return nil, errFolderPathInvalid
+		}
+		if _, err := os.Stat(newPath); err == nil {
+			return nil, errFolderNameExists
+		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if err := os.Rename(oldPath, newPath); err != nil {
+			return nil, fmt.Errorf("%w: %v", errFolderRenameFailed, err)
+		}
+		newRelPath = slug
+	}
+
+	_, err = s.db.Exec(`UPDATE folders SET name = ?, slug = ?, path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		name, slug, newRelPath, id)
+	if err != nil {
+		if slugChanged {
+			if revertErr := os.Rename(newPath, oldPath); revertErr != nil {
+				return nil, fmt.Errorf("%w: %v (rollback: %v)", errFolderRenameFailed, err, revertErr)
+			}
+		}
+		return nil, err
+	}
+
+	return s.getFolderByID(id)
 }
 
 func (s *Server) deleteFolder(id int64) error {

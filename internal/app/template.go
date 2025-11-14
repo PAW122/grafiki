@@ -309,10 +309,28 @@ const PageTemplate = `<!DOCTYPE html>
       font-size: 0.9rem;
       color: #364152;
     }
+    .tile-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
     .filename {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .image-rename-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.35rem 0.8rem;
+      background: rgba(59, 130, 246, 0.18);
+      color: #1d4ed8;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+    .image-rename-btn:hover {
+      background: rgba(59, 130, 246, 0.28);
+      transform: translateY(-2px);
     }
     .delete-btn {
       border: none;
@@ -602,7 +620,7 @@ const PageTemplate = `<!DOCTYPE html>
     }
   </style>
 </head>
-<body data-shared-mode="{{if .SharedMode}}true{{else}}false{{end}}" data-active-folder="{{if .ActiveFolder}}{{.ActiveFolder.Slug}}{{end}}" data-active-folder-id="{{if .ActiveFolder}}{{.ActiveFolder.ID}}{{end}}" data-active-folder-visibility="{{if .ActiveFolder}}{{.ActiveFolder.Visibility}}{{end}}" data-active-folder-share-token="{{if .ActiveFolder}}{{.ActiveFolder.SharedToken}}{{end}}" data-active-folder-share-url="{{if .ActiveFolder}}{{.ActiveFolder.ShareURL}}{{end}}" data-active-folder-share-views="{{if .ActiveFolder}}{{.ActiveFolder.SharedViews}}{{end}}">
+<body data-shared-mode="{{if .SharedMode}}true{{else}}false{{end}}" data-active-folder="{{if .ActiveFolder}}{{.ActiveFolder.Slug}}{{end}}" data-active-folder-id="{{if .ActiveFolder}}{{.ActiveFolder.ID}}{{end}}" data-active-folder-visibility="{{if .ActiveFolder}}{{.ActiveFolder.Visibility}}{{end}}" data-active-folder-share-token="{{if .ActiveFolder}}{{.ActiveFolder.SharedToken}}{{end}}" data-active-folder-share-url="{{if .ActiveFolder}}{{.ActiveFolder.ShareURL}}{{end}}" data-active-folder-share-views="{{if .ActiveFolder}}{{.ActiveFolder.SharedViews}}{{end}}" data-active-folder-name="{{if .ActiveFolder}}{{.ActiveFolder.Name}}{{end}}">
   <header class="topbar">
     <div class="brand">Galeria zdjec</div>
     <div class="top-actions">
@@ -707,7 +725,10 @@ const PageTemplate = `<!DOCTYPE html>
           <div class="tile-meta">
             <span class="filename" title="{{.Name}}">{{.Name}}</span>
             {{if $.AllowFolderManagement}}
-            <button type="button" class="delete-btn" data-name="{{.Name}}" data-folder="{{$.ActiveFolder.Slug}}">Usun</button>
+            <div class="tile-actions">
+              <button type="button" class="image-rename-btn" data-name="{{.Name}}" data-folder="{{$.ActiveFolder.Slug}}">Zmien nazwe</button>
+              <button type="button" class="delete-btn" data-name="{{.Name}}" data-folder="{{$.ActiveFolder.Slug}}">Usun</button>
+            </div>
             {{end}}
           </div>
         </div>
@@ -777,6 +798,12 @@ const PageTemplate = `<!DOCTYPE html>
         <p class="modal-subtitle">Dostosuj widocznosc oraz linki udostepnione dla tego katalogu.</p>
       </div>
       <div class="modal-section">
+        <label>
+          Nazwa folderu
+          <input type="text" name="folderName" id="folderNameInput" required>
+        </label>
+      </div>
+      <div class="modal-section">
         <span class="section-label">Widocznosc</span>
         <div class="visibility-options">
           <label class="radio-option">
@@ -835,7 +862,8 @@ const PageTemplate = `<!DOCTYPE html>
         activeFolderVisibility: dataset.activeFolderVisibility || '',
         activeFolderShareToken: dataset.activeFolderShareToken || '',
         activeFolderShareUrl: dataset.activeFolderShareUrl || '',
-        activeFolderShareViews: Number(dataset.activeFolderShareViews || 0)
+        activeFolderShareViews: Number(dataset.activeFolderShareViews || 0),
+        activeFolderName: dataset.activeFolderName || ''
       };
     })();
 
@@ -861,6 +889,7 @@ const PageTemplate = `<!DOCTYPE html>
     const folderSettingsModal = document.getElementById('folderSettingsModal');
     const folderSettingsForm = document.getElementById('folderSettingsForm');
     const folderSettingsCancel = document.getElementById('folderSettingsCancel');
+    const folderNameInput = document.getElementById('folderNameInput');
     const shareDetails = document.getElementById('shareDetails');
     const shareLinkValue = document.getElementById('shareLinkValue');
     const shareViewsValue = document.getElementById('shareViewsValue');
@@ -1223,6 +1252,37 @@ const PageTemplate = `<!DOCTYPE html>
       });
     });
 
+    document.querySelectorAll('.image-rename-btn').forEach(btn => {
+      btn.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const currentName = btn.dataset.name;
+        const folder = btn.dataset.folder || state.activeFolder;
+        if (!currentName || !folder) {
+          showMessage('Brak danych do zmiany nazwy', 'error');
+          return;
+        }
+        const proposed = prompt('Podaj nowa nazwe pliku (wraz z rozszerzeniem)', currentName);
+        if (proposed === null) {
+          return;
+        }
+        const trimmed = proposed.trim();
+        if (!trimmed || trimmed === currentName) {
+          return;
+        }
+        try {
+          await fetchJSON('/api/images/rename', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({folder, oldName: currentName, newName: trimmed})
+          });
+          window.location.reload();
+        } catch (err) {
+          showMessage(err.message, 'error');
+        }
+      });
+    });
+
     if (zoomSlider) {
       zoomSlider.addEventListener('input', () => {
         const value = Number(zoomSlider.value) || 100;
@@ -1284,6 +1344,7 @@ const PageTemplate = `<!DOCTYPE html>
     function currentFolderData() {
       return {
         id: state.activeFolderId,
+        name: state.activeFolderName || '',
         visibility: state.activeFolderVisibility || 'private',
         sharedToken: state.activeFolderShareToken || '',
         shareUrl: state.activeFolderShareUrl || '',
@@ -1297,6 +1358,11 @@ const PageTemplate = `<!DOCTYPE html>
         return;
       }
       const data = currentFolderData();
+      if (folderNameInput) {
+        folderNameInput.value = data.name || '';
+        folderNameInput.focus();
+        folderNameInput.select();
+      }
       folderSettingsForm?.querySelectorAll('input[name="visibility"]').forEach(radio => {
         radio.checked = radio.value === data.visibility;
       });
@@ -1310,13 +1376,28 @@ const PageTemplate = `<!DOCTYPE html>
       event.preventDefault();
       if (!state.activeFolderId) return;
       const visibility = folderSettingsForm.elements['visibility'].value;
+      const payload = { visibility };
+      if (folderNameInput) {
+        const nameValue = folderNameInput.value.trim();
+        if (!nameValue) {
+          showMessage('Nazwa folderu nie moze byc pusta', 'error');
+          folderNameInput.focus();
+          return;
+        }
+        payload.name = nameValue;
+      }
       try {
-        await fetchJSON('/api/folders/' + state.activeFolderId, {
+        const updated = await fetchJSON('/api/folders/' + state.activeFolderId, {
           method: 'PATCH',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({visibility})
+          body: JSON.stringify(payload)
         });
-        window.location.reload();
+        const slug = updated?.slug || updated?.Slug;
+        if (slug && slug !== state.activeFolder) {
+          window.location.href = '/?folder=' + encodeURIComponent(slug);
+        } else {
+          window.location.reload();
+        }
       } catch (err) {
         showMessage(err.message, 'error');
       }

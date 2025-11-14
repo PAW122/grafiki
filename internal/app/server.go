@@ -65,6 +65,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/logout", s.handleLogout)
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/delete", s.handleDelete)
+	mux.HandleFunc("/api/images/rename", s.handleRenameImage)
 	mux.HandleFunc("/api/folders", s.handleFolders)
 	mux.HandleFunc("/api/folders/", s.handleFolderByID)
 	mux.HandleFunc("/shared/", s.handleSharedFolder)

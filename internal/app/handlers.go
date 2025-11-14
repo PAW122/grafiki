@@ -229,6 +229,140 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func (s *Server) handleRenameImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Metoda niedozwolona")
+		return
+	}
+	if !s.sessions.authenticated(r) {
+		writeJSONError(w, http.StatusUnauthorized, "Wymagane logowanie")
+		return
+	}
+
+	var req struct {
+		Folder string `json:"folder"`
+		Old    string `json:"oldName"`
+		New    string `json:"newName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowe dane")
+		return
+	}
+
+	folderSlug := strings.TrimSpace(req.Folder)
+	oldName := strings.TrimSpace(req.Old)
+	newName := strings.TrimSpace(req.New)
+	if folderSlug == "" || oldName == "" || newName == "" {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowe dane")
+		return
+	}
+
+	folder, err := s.getFolderBySlug(folderSlug)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusBadRequest, "Folder nie istnieje")
+			return
+		}
+		log.Printf("folder lookup: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie sprawdzic folderu")
+		return
+	}
+
+	oldFile := filepath.Base(oldName)
+	if !isImageFile(oldFile) {
+		writeJSONError(w, http.StatusBadRequest, "Nieobslugiwany plik")
+		return
+	}
+	newFile := sanitizeFilename(newName)
+	if newFile == "" {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowa nazwa pliku")
+		return
+	}
+	oldExt := strings.ToLower(filepath.Ext(oldFile))
+	newExt := strings.ToLower(filepath.Ext(newFile))
+	if oldExt == "" {
+		writeJSONError(w, http.StatusBadRequest, "Nieznane rozszerzenie pliku")
+		return
+	}
+	if newExt == "" {
+		newFile += oldExt
+		newExt = oldExt
+	}
+	if !isImageFile(newFile) {
+		writeJSONError(w, http.StatusBadRequest, "Nieobslugiwane rozszerzenie pliku")
+		return
+	}
+	if newFile == oldFile {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "name": oldFile})
+		return
+	}
+
+	targetDir := s.dir
+	if folder.Path != "" {
+		targetDir = filepath.Join(targetDir, folder.Path)
+	}
+
+	if _, err := os.Stat(targetDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			writeJSONError(w, http.StatusBadRequest, "Folder nie istnieje")
+			return
+		}
+		log.Printf("stat folder: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie przygotowac folderu")
+		return
+	}
+
+	oldPath := filepath.Join(targetDir, oldFile)
+	newPath := filepath.Join(targetDir, newFile)
+
+	cleanDir := filepath.Clean(targetDir)
+	oldClean := filepath.Clean(oldPath)
+	newClean := filepath.Clean(newPath)
+	if oldClean != cleanDir && !strings.HasPrefix(oldClean, cleanDir+string(os.PathSeparator)) {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowy plik")
+		return
+	}
+	if newClean != cleanDir && !strings.HasPrefix(newClean, cleanDir+string(os.PathSeparator)) {
+		writeJSONError(w, http.StatusBadRequest, "Nieprawidlowa nazwa pliku")
+		return
+	}
+
+	if _, err := os.Stat(oldPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			writeJSONError(w, http.StatusNotFound, "Plik nie istnieje")
+			return
+		}
+		log.Printf("stat file: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie sprawdzic pliku")
+		return
+	}
+
+	if _, err := os.Stat(newPath); err == nil {
+		writeJSONError(w, http.StatusBadRequest, "Plik o takiej nazwie juz istnieje")
+		return
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("stat new file: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie przygotowac pliku")
+		return
+	}
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		log.Printf("rename file: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Nie udalo sie zmienic nazwy pliku")
+		return
+	}
+
+	if s.logger != nil {
+		s.logger.Log(r, "zmienzdj")
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"name":   filepath.Base(newPath),
+	})
+}
+
 func (s *Server) handleFolders(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -336,6 +470,7 @@ func (s *Server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, i
 	}
 
 	var req struct {
+		Name           string `json:"name"`
 		Visibility     string `json:"visibility"`
 		RegenerateLink bool   `json:"regenerateLink"`
 	}
@@ -347,13 +482,33 @@ func (s *Server) handleUpdateFolderAPI(w http.ResponseWriter, r *http.Request, i
 	var folder *folderRecord
 	var err error
 
+	if strings.TrimSpace(req.Name) != "" {
+		folder, err = s.renameFolder(id, req.Name)
+		if err != nil {
+			switch {
+			case errors.Is(err, sql.ErrNoRows):
+				writeJSONError(w, http.StatusNotFound, "Folder nie istnieje")
+			case errors.Is(err, errFolderProtected), errors.Is(err, errFolderPathInvalid), errors.Is(err, errFolderNameExists):
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			case errors.Is(err, errFolderRenameFailed):
+				log.Printf("rename folder: %v", err)
+				writeJSONError(w, http.StatusInternalServerError, errFolderRenameFailed.Error())
+			default:
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			}
+			return
+		}
+	}
+
 	if req.Visibility != "" {
 		folder, err = s.updateFolderVisibility(id, req.Visibility)
 		if err != nil {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-	} else {
+	}
+
+	if folder == nil {
 		folder, err = s.getFolderByID(id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
